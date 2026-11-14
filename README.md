@@ -1,6 +1,9 @@
-# Brigse
+<p align="center"><img src="assets/logo.svg" alt="Brigse logo: a tap with a drop" width="140"></p>
 
-*Bridge to Semiconductor.* The name also sounds like the Greek word for a tap (βρύση), hence the logo.
+<h1 align="center">Brigse</h1>
+
+<p align="center"><em>Bridge to Semiconductor.</em><br>
+The name also sounds like the Greek word for a tap (βρύση), hence the logo.</p>
 
 A modular [MCP](https://modelcontextprotocol.io) server that lets an AI agent build, inspect,
 simulate and program FPGA designs through one set of tools. Each FPGA family is an add-on behind
