@@ -3,6 +3,8 @@ name = "brigse"
 version = "0.1.0"
 description = "Modular MCP server for FPGA build, report, simulation and programming"
 readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
 requires-python = ">=3.10"
 dependencies = ["mcp>=1.2,<2"]
 

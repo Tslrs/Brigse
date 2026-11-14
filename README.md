@@ -136,3 +136,14 @@ uv run python tests/smoke_client.py --build  # also builds examples/blinky in th
 [fpga-mcp by wmm246](https://glama.ai/mcp/servers/wmm246/fpga-mcp) (Vivado/Quartus/Anlogic) and
 several Vivado-only servers cover current devices. This project's focus is the add-on structure
 and legacy ISE-only parts.
+
+## Contributors
+
+- [Tslrs](https://github.com/Tslrs): idea, direction, hardware and testing on real boards
+- Claude (Anthropic), working as a coding agent in Claude Code: implementation and tests
+
+## Licence
+
+Brigse is released under the [MIT licence](LICENSE). It covers only the code in this repository.
+The FPGA vendor tools that the add-ons drive (Xilinx ISE, Gowin EDA) have their own licences and
+are not distributed here.
