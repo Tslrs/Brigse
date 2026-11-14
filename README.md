@@ -5,6 +5,10 @@
 <p align="center"><em>Bridge to Semiconductor.</em><br>
 The name also sounds like the Greek word for a tap (βρύση), hence the logo.</p>
 
+<p align="center">Made by <a href="https://github.com/Tslrs">Tslrs</a> together with
+<a href="https://claude.com/claude-code">Claude</a> (Anthropic), working as a coding agent.
+See <a href="#contributors">Contributors</a>.</p>
+
 A modular [MCP](https://modelcontextprotocol.io) server that lets an AI agent build, inspect,
 simulate and program FPGA designs through one set of tools. Each FPGA family is an add-on behind
 a common interface, so the agent calls `build` the same way for every board.
@@ -168,8 +172,12 @@ and legacy ISE-only parts.
 
 ## Contributors
 
-- [Tslrs](https://github.com/Tslrs): idea, direction, hardware and testing on real boards
-- Claude (Anthropic), working as a coding agent in Claude Code: implementation and tests
+| Who | Part |
+|---|---|
+| [Tslrs](https://github.com/Tslrs) | Idea and direction, design decisions, the boards and licences, testing on real hardware |
+| [Claude](https://claude.com/claude-code) (Anthropic) | Implementation, the dashboard, tests and this documentation, written as a coding agent in Claude Code under Tslrs's direction |
+
+Every commit records both, with Claude as co-author.
 
 ## Licence
 
