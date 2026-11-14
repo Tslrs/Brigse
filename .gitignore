@@ -1,0 +1,17 @@
+# Proprietary vendor files and licences must never be committed.
+ise-lite/*.tar
+ise-lite/build.log
+*.lic
+# Build outputs
+out/
+build_out/
+*.bit
+*.mcs
+*.vvp
+*.vcd
+# Python
+.venv/
+__pycache__/
+*.egg-info/
+uv.lock
+.DS_Store

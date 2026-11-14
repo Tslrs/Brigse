@@ -1,0 +1,277 @@
+"""MCP server: one set of tools for every FPGA family, add-ons behind it."""
+from __future__ import annotations
+
+import json
+import os
+import sys
+import time
+import webbrowser
+from pathlib import Path
+
+from mcp.server.fastmcp import FastMCP
+
+from . import actions, boards, core, dashboard, installer, registry, store
+from .backends.base import BackendError
+
+PORT = int(os.environ.get("BRIGSE_PORT", dashboard.DEFAULT_PORT))
+
+mcp = FastMCP("brigse", instructions=(
+    "Build, inspect, simulate and program FPGA designs. Call list_backends and list_boards first. "
+    "build starts a background job and returns a job_id; poll build_status until state is 'done' "
+    "or 'failed'. program writes to hardware only when confirm=true. Installing an add-on needs "
+    "the user's approval: call request_install, tell the user to open the dashboard, then poll "
+    "install_status. Only the user can approve, in the dashboard. If a request is rejected, stop: "
+    "do not retry it or work around it."))
+
+
+def _guard(fn):
+    """Turn expected problems into a readable error payload instead of a stack trace."""
+    try:
+        return fn()
+    except BackendError as e:
+        return {"error": str(e)}
+
+
+def _board_view(b: dict) -> dict:
+    usable = [n for n in b["backends"] if registry.by_name(n).implemented and registry.by_name(n).usable()]
+    return {**b, "usable_backends": usable}
+
+
+# ---- discovery ------------------------------------------------------------
+@mcp.tool()
+def list_backends() -> dict:
+    """List the installed and planned FPGA add-ons, the part families each covers, and its state."""
+    return {"backends": [
+        {"name": b.name, "title": b.title, "implemented": b.implemented,
+         "part_patterns": list(b.part_patterns), "disk_cost": b.size_hint, **b.status()}
+        for b in registry.BACKENDS]}
+
+
+@mcp.tool()
+def list_boards() -> dict:
+    """List known boards (part, add-on, programmer support) and the one currently selected."""
+    return {"selected": store.selected_board(), "boards": [_board_view(b) for b in boards.BOARDS]}
+
+
+@mcp.tool()
+def select_board(board_id: str) -> dict:
+    """Select the board to work with. build then uses its part when no part is given.
+
+    The user can also pick the board in the dashboard; check list_boards for the current choice.
+    """
+    b = boards.get(board_id)
+    if not b:
+        return {"error": f"Unknown board '{board_id}'. Known: {[x['id'] for x in boards.BOARDS]}"}
+    store.select_board(board_id, by="agent")
+    return {"selected": _board_view(b)}
+
+
+@mcp.tool()
+def dashboard_info() -> dict:
+    """Return the address of the local status window and whether it is running."""
+    return {"url": dashboard.url(PORT), "running": dashboard.port_in_use(PORT),
+            "shows": "add-ons, boards, build progress and reports, and requests awaiting approval"}
+
+
+# ---- add-on installation (needs user approval) ------------------------------
+@mcp.tool()
+def request_install(backend: str, reason: str = "") -> dict:
+    """Ask the user to approve installing an add-on. Nothing is downloaded by this call.
+
+    The request appears in the dashboard with what would be installed, from where, the disk
+    cost and the licence situation. Only the user can approve or reject it there.
+    reason: one sentence for the user on why you need it.
+    """
+    def run():
+        b = registry.by_name(backend)
+        if b.status()["installed"]:
+            return {"state": "already_installed", "backend": backend}
+        req = store.new_request("install_backend", backend, f"Install add-on: {b.title}",
+                                b.install_plan(), reason)
+        return {"request_id": req["id"], "state": req["state"], "plan": req["plan"],
+                "dashboard": dashboard.url(PORT),
+                "next": "Ask the user to approve or reject in the dashboard, then call install_status."}
+    return _guard(run)
+
+
+@mcp.tool()
+def request_uninstall(backend: str, reason: str = "") -> dict:
+    """Ask the user to approve removing an add-on that Brigse installed. Nothing is deleted by this call.
+
+    Only add-ons installed by Brigse can be removed (the downloaded open-source tools); vendor tools
+    the user installed are never touched. Poll install_status with the returned request_id.
+    """
+    def run():
+        req = actions.uninstall_request(backend, reason)
+        return {"request_id": req["id"], "state": req["state"], "plan": req["plan"],
+                "dashboard": dashboard.url(PORT),
+                "next": "Ask the user to approve or reject in the dashboard, then call install_status."}
+    return _guard(run)
+
+
+@mcp.tool()
+def install_status(request_id: str, wait_seconds: int = 0) -> dict:
+    """Check an install or uninstall request. If the user approved it, start the work (when automatic).
+
+    wait_seconds: wait up to this long (max 50) for the user's decision.
+    """
+    def run():
+        deadline = time.time() + max(0, min(wait_seconds, 50))
+        while True:
+            req = store.get_request(request_id)
+            if not req:
+                raise BackendError(f"Unknown request '{request_id}'.")
+            if req["state"] != "pending" or time.time() >= deadline:
+                break
+            time.sleep(3)
+        out = {"request_id": request_id, "state": req["state"], "backend": req["subject"]}
+        if req["state"] == "pending":
+            out["note"] = f"Still waiting for the user at {dashboard.url(PORT)}"
+        elif req["state"] == "rejected":
+            out["note"] = "The user rejected this. Do not retry or work around it; ask them how to proceed."
+        elif req["state"] == "approved":
+            b = registry.by_name(req["subject"])
+            if not req["plan"].get("automatic"):
+                out["note"] = ("Approved, but this add-on has no automatic installer, so nothing "
+                               "was installed. " + b.status().get("install_hint", ""))
+            elif installer.start(request_id):
+                out.update(state=store.get_request(request_id)["state"],
+                           note="Started in the background; poll again.")
+        elif req["state"] in ("installing", "removing"):
+            out["progress"] = req.get("progress")
+        else:
+            out["result"] = req.get("result")
+        return out
+    return _guard(run)
+
+
+@mcp.tool()
+def activity() -> dict:
+    """What is in progress right now (builds, installs, programmer use) and who started it.
+
+    The user can also start actions from the dashboard, so check this before starting work
+    that needs the same add-on or the programmer.
+    """
+    return {"busy": actions.busy(), "last_program": store.get_state().get("last_program")}
+
+
+@mcp.tool()
+def backend_control(backend: str, action: str) -> dict:
+    """Start, stop or check an add-on's runtime (for ise_spartan3: its VM).
+
+    action: 'start', 'stop' or 'status'. Stopping frees RAM; it is refused while a build runs.
+    """
+    return _guard(lambda: registry.by_name(backend).control(action))
+
+
+# ---- build ----------------------------------------------------------------
+@mcp.tool()
+def build(project_dir: str, top: str, part: str | None = None,
+          sources: list[str] | None = None, constraints: str | None = None,
+          backend: str | None = None) -> dict:
+    """Start a full build (synthesis to bitstream) as a background job.
+
+    project_dir: folder with the HDL sources (copied to the build machine; old outputs are skipped).
+    top: top module name. If <top>.xst exists in the folder, the project's own synthesis script is used.
+    part: device-package-speed, e.g. xc3s700a-fg484-4. Defaults to the selected board's part.
+          The part selects the add-on.
+    sources: paths relative to project_dir; default is every .v/.vhd in the folder except testbenches.
+    constraints: constraints file relative to project_dir; default is the only .ucf (ISE) or
+          .cst (Gowin) in the folder.
+    backend: force a specific add-on. By default the usable add-on with the highest priority is
+          used (the vendor tool when the user has it, otherwise the open-source flow).
+    """
+    return _guard(lambda: actions.start_build(project_dir, top, part, sources, constraints, backend, by="agent"))
+
+
+@mcp.tool()
+def build_status(job_id: str, wait_seconds: int = 0) -> dict:
+    """Report a build job's progress; when it has finished, fetch the outputs and return the report.
+
+    wait_seconds: wait up to this long (max 50) for the job to finish before answering.
+    """
+    def run():
+        meta_path = store.JOBS / f"{job_id}.json"
+        if not meta_path.is_file():
+            raise BackendError(f"Unknown job '{job_id}'.")
+        backend = registry.by_name(json.loads(meta_path.read_text())["backend"])
+        deadline = time.time() + max(0, min(wait_seconds, 50))
+        while True:
+            st = backend.build_status(job_id)
+            if st["state"] != "running" or time.time() >= deadline:
+                return st
+            time.sleep(5)
+    return _guard(run)
+
+
+@mcp.tool()
+def report(outputs_dir: str, backend: str | None = None) -> dict:
+    """Summarise the reports in a build output folder: utilisation, timing, failing constraints, bitstream.
+
+    backend: the add-on that produced the folder; detected automatically when omitted.
+    """
+    def run():
+        if backend:
+            return registry.by_name(backend).report(Path(outputs_dir))
+        for b in registry.BACKENDS:
+            if b.implemented:
+                try:
+                    return {"backend": b.name, **b.report(Path(outputs_dir))}
+                except BackendError:
+                    continue
+        raise BackendError(f"No known build reports found in {outputs_dir}")
+    return _guard(run)
+
+
+# ---- simulate / program ---------------------------------------------------
+@mcp.tool()
+def simulate(sources: list[str], top: str | None = None, cwd: str | None = None,
+             timeout_s: int = 60) -> dict:
+    """Compile and run a Verilog testbench with Icarus Verilog.
+
+    sources: files relative to cwd, testbench included. top: testbench module, if ambiguous.
+    The run passes when the simulator exits 0 and prints no FAIL/ERROR text.
+    """
+    return _guard(lambda: core.simulate(sources, top, cwd, timeout_s))
+
+
+@mcp.tool()
+def detect_boards(cable: str | None = None) -> dict:
+    """List connected USB programming probes and, for a given cable, the FPGAs on its JTAG chain."""
+    return _guard(lambda: core.detect_boards(cable))
+
+
+@mcp.tool()
+def program(bitstream: str, cable: str | None = None, board: str | None = None,
+            part: str | None = None, write_flash: bool = False, confirm: bool = False) -> dict:
+    """Load a bitstream onto a board with openFPGALoader.
+
+    Prefer the temporary SRAM load (write_flash=false): it leaves the design stored on the board
+    untouched. Use write_flash=true only when the user explicitly asks for a permanent write.
+
+    Without confirm=true this is a dry run that only shows the command. write_flash=true makes the
+    design persistent. Pass part to check first that the loader supports the device.
+    """
+    return _guard(lambda: actions.program(bitstream, cable, board, part, write_flash, confirm, by="agent"))
+
+
+def main() -> None:
+    if sys.argv[1:2] == ["dashboard"]:
+        if dashboard.port_in_use(PORT):
+            print(f"Dashboard already running at {dashboard.url(PORT)}")
+        else:
+            print(f"Dashboard at {dashboard.url(PORT)}  (Ctrl-C to stop)")
+            if "--no-open" not in sys.argv:
+                webbrowser.open(dashboard.url(PORT))
+            try:
+                dashboard.serve(PORT)
+            except KeyboardInterrupt:
+                pass
+        return
+    if os.environ.get("BRIGSE_DASHBOARD", "1") != "0":
+        dashboard.start_in_background(PORT)
+    mcp.run()
+
+
+if __name__ == "__main__":
+    main()
