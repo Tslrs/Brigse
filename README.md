@@ -9,13 +9,39 @@ A modular [MCP](https://modelcontextprotocol.io) server that lets an AI agent bu
 simulate and program FPGA designs through one set of tools. Each FPGA family is an add-on behind
 a common interface, so the agent calls `build` the same way for every board.
 
-Status: early. Three add-ons are implemented and tested: Xilinx ISE 14.7 for Spartan-3/3A/3E, and two
-for Gowin (the vendor's Gowin EDA if you have it, and the open-source flow). When several add-ons
-cover a part, the usable vendor tool is preferred; pass `backend` to `build` to choose.
+> **Early stage (v0.1).** Brigse works on its author's machine, an Apple Silicon Mac on macOS 27, and
+> has gone from Verilog to a running board on one board so far. It has not been tried on other
+> machines or operating systems. Expect rough edges and breaking changes. Systematic testing is
+> planned and listed below; until then, treat it as a working prototype.
+
+Three add-ons are implemented: Xilinx ISE 14.7 for Spartan-3/3A/3E, and two for Gowin (the vendor's
+Gowin EDA if you have it, and the open-source flow). When several add-ons cover a part, the usable
+vendor tool is preferred; pass `backend` to `build` to choose.
 
 Open-source add-ons are installed on request: the agent calls `request_install`, the plan (what,
 from where, how big, licence) appears in the dashboard at `http://brigse.localhost:8765`, and only
 the user can approve it there. Vendor tools and licences are never downloaded by the server.
+
+### What has been checked so far
+
+| Area | Checked | Not checked yet |
+|---|---|---|
+| Spartan-3A (ISE) | Builds of a small example and of the Next186 SoC; the SoC bitstream matched a reference build | Loading onto the board from macOS (not supported yet) |
+| Gowin, vendor tool | Build, then a temporary load onto a Tang Nano 9K; LEDs seen blinking | Other Gowin boards and parts |
+| Gowin, open-source | Install after approval, build, uninstall (on a test folder) | Its bitstream on a real board |
+| Dashboard and approvals | Board choice, approve/reject, buttons refused while something runs | Browsers other than the one used in development |
+| Platforms | macOS 27 on Apple Silicon | Linux, Windows, Intel Macs |
+
+The scripts in `tests/` drive the server over MCP the way an agent would; they need the real tools
+installed and are run by hand.
+
+### Planned
+
+- Automated checks that run without vendor tools, on every change
+- Testing on Linux and on more boards
+- Programming the Spartan-3A from macOS
+- Add-ons for AMD 7-series and Cyclone V
+- Parsed reports and clearer errors for larger designs
 
 ## How the idea came about
 
