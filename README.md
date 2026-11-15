@@ -52,9 +52,11 @@ installed and are run by hand.
 
 ## How the idea came about
 
-Brigse started as a side effect of another project: running a Next186 x86 system-on-chip on an old
-Spartan-3A board. That chip can only be built with Xilinx ISE 14.7, a tool from 2013 with no macOS
-version, so every build meant booting a 49 GB Ubuntu desktop VM, typing the same six commands and
+Brigse came out of [NanoLink86](https://github.com/Tslrs/NanoLink86), a project that runs FreeDOS on the
+open-source Next186 x86 system-on-chip (by Nicolae Dumitrache) on two FPGA boards: a Sipeed Tang
+Nano 9K (Gowin) and a Xilinx Spartan-3A Starter Kit. Two boards meant two vendor toolchains, and the
+Spartan-3A was the problem: that chip can only be built with Xilinx ISE 14.7, a tool from 2013 with no
+macOS version. Every build meant booting a 49 GB Ubuntu desktop VM, typing the same six commands and
 reading thousand-line logs to find out whether timing had passed.
 
 Two questions came out of that. Could the heavy part shrink, and could an AI agent do the routine
@@ -63,7 +65,7 @@ VM. Along the way it turned out that ISE cannot run under user-mode x86 translat
 Silicon at all, which is why the VM stays. The second answer was an MCP server, so that "build this
 and tell me if timing passes" becomes one request instead of a ritual.
 
-A second board, a Tang Nano 9K, made it clear that each family should be a separate add-on: you
+Having both boards in one project made it clear that each family should be a separate add-on: you
 install only what your boards need, vendor tool or open-source flow, behind the same tools. The
 local window and the approval step came from a simple rule: an agent may ask to download or delete
 something, but a person decides.
