@@ -121,6 +121,10 @@ constraint is traced to its slowest path (ISE).
 
 ## The window
 
+<p align="center"><img src="assets/dashboard-builds.png" width="70%" alt="The Brigse dashboard: the selected board, a build with its steps and timing, and the chip view showing which tiles of the Tang Nano 9K hold the design"></p>
+<p align="center"><img src="assets/dashboard-waveforms.png" width="70%" alt="The Brigse dashboard: the recorded waveforms of a simulation, with zoom and a radix menu"></p>
+
+
 `brigse dashboard` opens `http://brigse.localhost:8765`, a page served on this machine only. It shows
 what is running, the selected board, builds with their reports, and the add-ons. The user can pick
 the board, approve or reject the agent's requests, repeat a build, load a build into the board's

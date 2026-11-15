@@ -229,6 +229,7 @@ h2{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--mute
 .tag.ok{color:var(--ok)}.tag.bad{color:var(--bad)}.tag.warn{color:var(--warn)}.tag.run{color:var(--accent)}
 button{font:inherit;font-size:14px;border:1px solid var(--line);background:var(--card);color:var(--ink);
 border-radius:8px;padding:7px 14px;cursor:pointer}
+select{font:inherit;font-size:14px;background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:7px 10px}
 button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
 button.danger{color:var(--bad)}
 button:disabled{opacity:.4;cursor:not-allowed;filter:grayscale(1)}
