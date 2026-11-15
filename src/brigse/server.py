@@ -236,6 +236,24 @@ def diagnose(outputs_dir: str, backend: str | None = None) -> dict:
 
 
 @mcp.tool()
+def chip_view(bitstream: str, family: str = "GW1N-9C", label: str | None = None, out_dir: str | None = None) -> dict:
+    """Draw where a Gowin design sits on the chip, from its bitstream (.fs), as SVG and PNG.
+
+    Works for builds made with Gowin EDA as well as the open-source flow, because it reads the
+    bitstream itself. The PNG (needs Pillow) is sized for a slide. The file is only read.
+    Limits, also written on the picture: multipliers cannot be read, input pins are not shown,
+    and only the GW1N-9C chip (Tang Nano 9K) has been checked. Needs the gowin_oss add-on.
+
+    out_dir: where to write; defaults to a new folder under ~/.brigse/chipviews.
+    """
+    def run():
+        from . import floorplan
+        target = Path(out_dir) if out_dir else store.HOME / "chipviews" / time.strftime("%Y%m%d-%H%M%S")
+        return floorplan.from_bitstream(Path(bitstream), target, family, label)
+    return _guard(run)
+
+
+@mcp.tool()
 def report(outputs_dir: str, backend: str | None = None) -> dict:
     """Summarise the reports in a build output folder: utilisation, timing, failing constraints, bitstream.
 

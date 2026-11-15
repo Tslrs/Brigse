@@ -8,6 +8,9 @@ license-files = ["LICENSE"]
 requires-python = ">=3.10"
 dependencies = ["mcp>=1.2,<2"]
 
+[project.optional-dependencies]
+png = ["pillow>=10"]
+
 [project.scripts]
 brigse = "brigse.server:main"
 

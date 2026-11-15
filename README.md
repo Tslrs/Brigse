@@ -34,6 +34,7 @@ the user can approve it there. Vendor tools and licences are never downloaded by
 | Gowin, vendor tool | Build, then a temporary load onto a Tang Nano 9K; LEDs seen blinking | Other Gowin boards and parts |
 | Gowin, open-source | Install after approval, build, uninstall (on a test folder) | Its bitstream on a real board |
 | Error explainer | 18 real failures from the three toolchains, plus 2 good builds that must stay quiet (`tests/test_diagnose.py`, no vendor tools needed) | Errors outside this list are reported unexplained |
+| Chip view from a bitstream | Against a known placement: 408 of 408 logic tiles and 4 of 4 block RAM, no false ones; empty designs show nothing; on a real Gowin EDA build the block RAM count (19 of 26) equals the IDE's own report | Multipliers, input pins, other chips |
 | Waveforms and chip view | Recording, text view, dashboard endpoint (`tests/test_waves.py`); chip view against a real placement (`tests/test_floorplan.py`); both also looked at in a browser | Large recordings (capped at 60 000 changes), other Gowin chips for the chip view (only the 9K was checked) |
 | Dashboard and approvals | Board choice, approve/reject, buttons refused while something runs | Browsers other than the one used in development |
 | Platforms | macOS 27 on Apple Silicon | Linux, Windows, Intel Macs |
@@ -77,6 +78,7 @@ The name is short for *Bridge to Semiconductor*, and it sounds like βρύση, 
 | `build` | Starts synthesis-to-bitstream as a background job, returns a `job_id` |
 | `build_status` | Progress per step; when finished, fetches outputs and returns the report |
 | `diagnose` | Explains a failed build in plain words (where, why, how to fix) and catches mistakes the tools let through |
+| `chip_view` | Draws where a Gowin design sits on the chip, from its bitstream (Gowin EDA builds too), as SVG and a PNG for slides |
 | `report` | Utilisation, timing, failing constraints and bitstream from an output folder |
 | `simulate` | Compiles and runs a Verilog testbench with Icarus Verilog and records every signal, with no change to the testbench |
 | `waves` | Reads a recording as text for an agent: what changed and when, or one row per clock edge |
@@ -107,8 +109,13 @@ constraint is traced to its slowest path (ISE).
 - **Chip view.** For builds made with the open-source Gowin flow, the dashboard draws the chip as a grid
   of tiles and colours the ones that hold your design: logic, pins, block RAM, multipliers. It is drawn
   from the placement nextpnr wrote and the chip database that ships with the tools. Gowin EDA's own
-  placement cannot be read outside its GUI, so its builds have no chip view. `examples/tangnano9k_demo`
-  is a design that uses logic, block RAM and a multiplier, to show what a fuller chip looks like.
+  placement cannot be read outside its GUI, so for those builds (and any other Gowin bitstream) the
+  `chip_view` tool reads the bitstream itself with `gowin_unpack` and counts the tiles that hold a
+  configured LUT, a block RAM, a PLL or an output buffer. It never changes the file. Limits, also written on
+  the picture: multipliers cannot be read, input pins cannot be told from unused ones, and only the
+  GW1N-9C chip (Tang Nano 9K) has been checked. For a PNG that can go on a slide: `uv sync --extra png`.
+  `examples/tangnano9k_demo` is a design that uses logic, block RAM and a multiplier, to show what a
+  fuller chip looks like.
 
 ## The window
 
