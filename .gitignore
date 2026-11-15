@@ -18,3 +18,7 @@ uv.lock
 
 # Test fixtures are real tool output on purpose
 !tests/fixtures/**/build_out/
+
+# Local, large and rebuildable: the downloaded tools and state, and the ISE virtual machine
+data/
+vm/

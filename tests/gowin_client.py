@@ -1,7 +1,7 @@
 """Build examples/tangnano9k_blinky for a Tang Nano 9K through the MCP server.
 
 usage: uv run python tests/gowin_client.py [gowin_eda|gowin_oss]
-Uses your real ~/.brigse state; needs the chosen add-on to be usable.
+Uses your real Brigse data folder; needs the chosen add-on to be usable.
 """
 import asyncio
 import json

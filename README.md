@@ -175,7 +175,7 @@ Create the VM and unpack that tree to `/opt/Xilinx/14.7/ISE_DS`, with the licenc
 
 ```bash
 brew install lima lima-additional-guestagents qemu
-limactl start --name=ise --tty=false --arch=x86_64 --vm-type=qemu --cpus=4 --memory=4 --disk=8 --containerd=none template:debian-12
+LIMA_HOME="$PWD/vm" limactl start --name=ise --tty=false --arch=x86_64 --vm-type=qemu --cpus=4 --memory=4 --disk=8 --containerd=none template:debian-12
 ```
 
 `build` copies the project into the VM, runs `xst`, `ngdbuild`, `map`, `par`, `trce` and `bitgen`,
@@ -190,6 +190,22 @@ Known limits:
 - Programming a Spartan-3A from macOS is untested. openFPGALoader does not list the XC3S700A or
   the Xilinx Platform Cable USB, so `program` refuses that part instead of guessing.
 - One VM, one build at a time is the tested case.
+
+## Where things live
+
+Everything Brigse needs can sit in one folder, next to the code:
+
+```text
+Brigse/
+├── src/ tests/ examples/ ...   the code (this repository)
+├── ise-lite/                   your own slimmed ISE archives (never committed)
+├── data/                       state and the open-source tools Brigse downloaded (never committed)
+└── vm/                         Lima's home, with the small ISE virtual machine (never committed)
+```
+
+If `data/` exists next to the code it is used; otherwise `~/.brigse`. Set `BRIGSE_HOME` to choose another
+place. The same goes for `vm/` and `BRIGSE_VM_HOME` (otherwise Lima's default, `~/.lima`). To run `limactl`
+by hand against that VM: `export LIMA_HOME=<this folder>/vm`.
 
 ## Test
 

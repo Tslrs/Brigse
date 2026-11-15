@@ -16,13 +16,14 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
+from brigse import store
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 
 PORT = "8792"
 BASE = f"http://127.0.0.1:{PORT}"
 PROJECT = Path(__file__).resolve().parent.parent / "examples" / "tangnano9k_blinky"
-REAL_TOOLS = Path.home() / ".brigse" / "tools"
+REAL_TOOLS = store.HOME / "tools"          # read before the test points BRIGSE_HOME elsewhere
 
 
 def http(path, body=None, token=None):

@@ -1,7 +1,7 @@
 """Download and locate the OSS CAD Suite (yosys, nextpnr, apicula, ...).
 
 One install is shared by every open-source add-on. It lives under
-~/.brigse/tools/oss-cad-suite and is only ever installed after the user
+<data folder>/tools/oss-cad-suite and is only ever installed after the user
 approved the plan in the dashboard.
 """
 from __future__ import annotations

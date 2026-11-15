@@ -23,6 +23,21 @@ from .. import diagnose, store
 from .base import Backend, BackendError
 
 VM = os.environ.get("BRIGSE_ISE_VM", "ise")
+
+
+def _vm_home() -> str | None:
+    """Where Lima keeps the VM: BRIGSE_VM_HOME, else the vm/ folder next to the source, else Lima's own default."""
+    if os.environ.get("BRIGSE_VM_HOME"):
+        return os.environ["BRIGSE_VM_HOME"]
+    root = Path(__file__).resolve().parents[3]
+    return str(root / "vm") if (root / "pyproject.toml").is_file() and (root / "vm").is_dir() else None
+
+
+VM_HOME = _vm_home()
+
+
+def _env() -> dict | None:
+    return {**os.environ, "LIMA_HOME": VM_HOME} if VM_HOME else None
 ISE_ROOT = "/opt/Xilinx/14.7/ISE_DS"
 JOBS_LOCAL = store.JOBS
 STEPS = ("xst", "ngdbuild", "map", "par", "trce", "bitgen")
@@ -76,7 +91,7 @@ run
 
 def _run(args: list[str], *, input: bytes | None = None, timeout: int = 120) -> subprocess.CompletedProcess:
     try:
-        return subprocess.run(args, input=input, capture_output=True, timeout=timeout)
+        return subprocess.run(args, input=input, capture_output=True, timeout=timeout, env=_env())
     except FileNotFoundError:
         raise BackendError("limactl not found. Install Lima: brew install lima lima-additional-guestagents qemu")
     except subprocess.TimeoutExpired:
@@ -242,7 +257,7 @@ class IseSpartan3Backend(Backend):
         proc = subprocess.Popen(
             ["limactl", "shell", "--workdir", "/tmp", VM, "bash", "-c",
              f"mkdir -p ~/fpga-jobs/{job_id} && tar xzf - -C ~/fpga-jobs/{job_id}"],
-            stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=_env())
         count = 0
         with tarfile.open(fileobj=proc.stdin, mode="w|gz") as tar:
             for root, dirs, files in os.walk(project_dir):

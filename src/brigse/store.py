@@ -1,7 +1,7 @@
 """Small on-disk state shared by the MCP server and the dashboard.
 
 Both may run as separate processes, so everything is plain JSON files under
-~/.brigse, written atomically.
+the data folder, written atomically.
 """
 from __future__ import annotations
 
@@ -12,7 +12,17 @@ import secrets
 import time
 from pathlib import Path
 
-HOME = Path(os.environ.get("BRIGSE_HOME", Path.home() / ".brigse"))
+def _default_home() -> Path:
+    """BRIGSE_HOME if set; else the data/ folder next to the source, when there is one; else ~/.brigse."""
+    if os.environ.get("BRIGSE_HOME"):
+        return Path(os.environ["BRIGSE_HOME"])
+    root = Path(__file__).resolve().parents[2]
+    if (root / "pyproject.toml").is_file() and (root / "data").is_dir():
+        return root / "data"
+    return Path.home() / ".brigse"
+
+
+HOME = _default_home()
 JOBS = HOME / "jobs"
 REQUESTS = HOME / "requests"
 LOCKS = HOME / "locks"

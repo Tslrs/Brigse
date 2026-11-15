@@ -244,7 +244,7 @@ def chip_view(bitstream: str, family: str = "GW1N-9C", label: str | None = None,
     Limits, also written on the picture: multipliers cannot be read, input pins are not shown,
     and only the GW1N-9C chip (Tang Nano 9K) has been checked. Needs the gowin_oss add-on.
 
-    out_dir: where to write; defaults to a new folder under ~/.brigse/chipviews.
+    out_dir: where to write; defaults to a new folder under the data folder (chipviews).
     """
     def run():
         from . import floorplan
