@@ -260,14 +260,22 @@ th{color:var(--mute);font-weight:500}dl{display:grid;grid-template-columns:auto 
 dt{color:var(--mute)}dd{margin:0;overflow-wrap:anywhere}
 details>summary{cursor:pointer;color:var(--mute);font-size:13px;margin-top:8px}
 #err{color:var(--bad);margin:6px 2px;min-height:0}
+#approvals h2{margin-top:14px}
+#tabs{display:flex;gap:4px;margin:18px 0 14px;padding:4px;background:var(--chip);border-radius:12px;overflow-x:auto}
+#tabs button{flex:1;white-space:nowrap;border:0;background:transparent;color:var(--mute);border-radius:9px;padding:8px 12px;font-weight:500}
+#tabs button[aria-selected=true]{background:var(--card);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.18)}
+#tabs button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+#tabs .n{display:inline-block;min-width:18px;margin-left:6px;padding:0 6px;border-radius:999px;background:var(--line);color:var(--mute);font-size:11px;line-height:18px}
+section[role=tabpanel][hidden]{display:none}
 </style></head><body><main>
 <header><svg class="logo" viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10h10a5 5 0 0 1 5 5"/><path d="M9 10V6M6 6h6"/><path d="M3 7v6"/><path d="M18 18.2c-.9 1.2-1.3 1.9-1.3 2.5a1.3 1.3 0 0 0 2.6 0c0-.6-.4-1.3-1.3-2.5z" fill="currentColor" stroke="none"/></svg><div><h1>Brigse</h1><div class="mute small">Bridge to Semiconductor</div></div></header>
 <div id="statusbox"></div><div id="err" class="small"></div>
 <div id="approvals"></div>
-<h2>Board</h2><div id="boards"></div>
-<h2>Builds</h2><div id="jobs"></div>
-<h2>Simulations</h2><div id="sims"></div>
-<h2>Add-ons</h2><div id="backends"></div>
+<nav id="tabs" role="tablist" aria-label="Sections"></nav>
+<section id="p-builds" role="tabpanel"><div id="jobs"></div></section>
+<section id="p-sims" role="tabpanel"><div id="sims"></div></section>
+<section id="p-board" role="tabpanel"><div id="boards"></div></section>
+<section id="p-addons" role="tabpanel"><div id="backends"></div></section>
 </main><script>
 const TOKEN="__TOKEN__";
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -387,9 +395,19 @@ function backendsView(d){
       <div class="grow"><b>${esc(b.title)}</b><div class="small mute">${esc(b.detail)} ${esc(b.install_hint||"")}</div></div>
       <span class="tag ${s[1]}">${s[0]}</span>${b.buttons.map(x=>btn(label[x],"/api/backends/"+b.name+"/"+x,busy,x==="uninstall"?"danger":"",null,ask[x])).join("")}</div>`;}).join("")+"</div>");}
 __WAVES_JS__
+const TABS=[["builds","Builds"],["sims","Waveforms"],["board","Board"],["addons","Add-ons"]];
+let tab="builds",lastTabs=null;
+try{const t=localStorage.getItem("brigse-tab");if(TABS.some(x=>x[0]===t))tab=t;}catch(e){}
+function pick(t){tab=t;try{localStorage.setItem("brigse-tab",t);}catch(e){}lastTabs=null;if(window.__d)tabsView(window.__d);}
+function tabsView(d){
+  const n={builds:(d.jobs||[]).length,sims:(d.sims||[]).length};
+  const key=tab+"|"+n.builds+"|"+n.sims;
+  for(const [id] of TABS)document.getElementById("p-"+id).hidden=id!==tab;
+  if(key===lastTabs)return;lastTabs=key;
+  document.getElementById("tabs").innerHTML=TABS.map(([id,l])=>`<button role="tab" aria-selected="${id===tab}" onclick="pick('${id}')">${l}${n[id]?`<span class="n">${n[id]}</span>`:""}</button>`).join("");}
 async function tick(){
-  try{const d=await (await fetch("/api/state")).json();
-    statusView(d);approvals(d);boardsView(d);jobsView(d);simsView(d);backendsView(d);
+  try{const d=await (await fetch("/api/state")).json();window.__d=d;
+    statusView(d);approvals(d);boardsView(d);jobsView(d);simsView(d);backendsView(d);tabsView(d);
     if(errAt&&Date.now()-errAt>12000)fail("");
   }catch(e){put("statusbox",'<div id="status" class="busy"><span class="dot"></span><div>The Brigse server is not reachable.</div></div>');}}
 tick();setInterval(tick,3000);
