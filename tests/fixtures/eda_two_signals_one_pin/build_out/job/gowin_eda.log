@@ -1,0 +1,2 @@
+ERROR  (PR2030) : The constrained location has already been used
+ERROR  (PR2016) : Instance 'led_1_obuf' cannot be placed according to constraint, for the location has already been used by 'led_0_obuf' located in 10(IOL15[A])

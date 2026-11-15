@@ -1,0 +1,21 @@
+Reading design: blinky.prj
+
+=========================================================================
+*                          HDL Compilation                              *
+=========================================================================
+Compiling verilog file "blinky.v" in library work
+ERROR:HDLCompilers:26 - "blinky.v" line 11 unexpected token: 'assign'
+ERROR:HDLCompilers:26 - "blinky.v" line 11 expecting ';', found ':'
+ERROR:HDLCompilers:26 - "blinky.v" line 11 unexpected token: '-'
+Module <blinky> compiled
+ERROR:HDLCompilers:26 - "blinky.v" line 11 expecting 'endmodule', found '4'
+Analysis of file <"blinky.prj"> failed.
+--> 
+
+
+Total memory usage is 471812 kilobytes
+
+Number of errors   :    4 (   0 filtered)
+Number of warnings :    0 (   0 filtered)
+Number of infos    :    0 (   0 filtered)
+

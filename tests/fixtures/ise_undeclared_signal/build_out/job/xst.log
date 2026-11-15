@@ -1,0 +1,18 @@
+Reading design: blinky.prj
+
+=========================================================================
+*                          HDL Compilation                              *
+=========================================================================
+Compiling verilog file "blinky.v" in library work
+ERROR:HDLCompilers:28 - "blinky.v" line 11 'cnt' has not been declared
+Module <blinky> compiled
+Analysis of file <"blinky.prj"> failed.
+--> 
+
+
+Total memory usage is 471808 kilobytes
+
+Number of errors   :    1 (   0 filtered)
+Number of warnings :    0 (   0 filtered)
+Number of infos    :    0 (   0 filtered)
+

@@ -1,0 +1,24 @@
+Reading design: blinky.prj
+
+=========================================================================
+*                          HDL Compilation                              *
+=========================================================================
+Compiling verilog file "blinky.v" in library work
+Module <blinky> compiled
+No errors in compilation
+Analysis of file <"blinky.prj"> succeeded.
+ 
+
+=========================================================================
+*                     Design Hierarchy Analysis                         *
+=========================================================================
+ERROR:HDLCompilers:87 - "blinky.v" line 11 Could not find module/primitive 'foo'
+--> 
+
+
+Total memory usage is 484112 kilobytes
+
+Number of errors   :    1 (   0 filtered)
+Number of warnings :    0 (   0 filtered)
+Number of infos    :    0 (   0 filtered)
+

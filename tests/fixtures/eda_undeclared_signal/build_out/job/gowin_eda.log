@@ -1,0 +1,2 @@
+ERROR (EX3872) : 'cnt' is not declared("/home/user/project/blinky.v":13)
+ERROR (EX3928) : Module 'blinky' is ignored due to previous errors("/home/user/project/blinky.v":14)

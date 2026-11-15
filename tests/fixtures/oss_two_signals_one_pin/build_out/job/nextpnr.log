@@ -1,0 +1,2 @@
+ERROR: Can't place led_OBUF_O_2 at X0Y14/IOBA because it's already taken by led_OBUF_O_3
+0 warnings, 1 error

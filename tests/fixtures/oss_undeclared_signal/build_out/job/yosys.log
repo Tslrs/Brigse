@@ -1,0 +1,4 @@
+blinky.v:13: Warning: Identifier `\cnt' is implicitly declared.
+blinky.v:13: Warning: Range select [25:22] out of bounds on signal `\cnt': Setting all 4 result bits to undef.
+ABC: Warning: The network is combinational.
+Warnings: 2 unique messages, 2 total

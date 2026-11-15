@@ -1,0 +1,1 @@
+ERROR: Module `\foo' referenced in module `\blinky' in cell `\u_foo' is not part of the design.

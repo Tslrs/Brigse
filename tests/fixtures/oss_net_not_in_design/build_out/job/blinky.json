@@ -1,0 +1,29 @@
+{
+ "modules": {
+  "blinky": {
+   "ports": {
+    "clk": {
+     "direction": "input",
+     "bits": [
+      2
+     ]
+    },
+    "rst_n": {
+     "direction": "input",
+     "bits": [
+      3
+     ]
+    },
+    "led": {
+     "direction": "output",
+     "bits": [
+      4,
+      5,
+      6,
+      7
+     ]
+    }
+   }
+  }
+ }
+}
