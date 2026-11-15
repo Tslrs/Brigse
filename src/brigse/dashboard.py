@@ -282,6 +282,9 @@ const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&
 const last={},open={};let showBoards=false,errAt=0;
 function put(id,h){if(last[id]!==h){last[id]=h;document.getElementById(id).innerHTML=h;}}
 function tog(id,on){open[id]=on;}
+const when=t=>{if(!t)return"";const d=new Date(t*1000),n=new Date(),p=x=>String(x).padStart(2,"0"),
+  hm=p(d.getHours())+":"+p(d.getMinutes());
+  return d.toDateString()===n.toDateString()?"today "+hm:d.getFullYear()+"-"+p(d.getMonth()+1)+"-"+p(d.getDate())+" "+hm;};
 const dur=s=>s==null?"":s<60?s+" s":Math.floor(s/60)+" min "+(s%60)+" s";
 const who=b=>b==="agent"?"the agent":"you";
 const ORDER=["xst","ngdbuild","map","par","trce","bitgen"];
@@ -357,7 +360,8 @@ function diagView(j){
 function jobCard(j,busy){
   const done=new Map((j.steps||[]).map(s=>[s.step,s]));
   const cls={done:"ok",failed:"bad",running:"run",unknown:"warn"}[j.state]||"";
-  let h=`<div class="card"><div class="row"><div class="grow"><b>${esc(j.project)}</b> <span class="mute small">${esc(j.part)}</span></div>
+  let h=`<div class="card"><div class="row"><div class="grow"><b>${esc(j.project)}</b> <span class="mute small">${esc(j.part)}</span>
+    <div class="mute small">${esc(when(j.started))}</div></div>
     <span class="tag ${cls}">${esc(j.state)}</span></div><div class="steps">`;
   for(const s of (j.step_order||ORDER)){const st=done.get(s);let c="",t="";
     if(st){c=st.exit_code===0?"done":"fail";t=dur(st.seconds);}
@@ -373,7 +377,7 @@ function jobCard(j,busy){
   const tail=(j.diagnosis&&j.diagnosis.problems&&j.diagnosis.problems.length)?null:(j.error_tail||(j.state==="running"?j.log_tail:null));
   if(tail&&tail.length)h+=`<pre>${esc(tail.join("\n"))}</pre>`;
   const fp=j.report&&j.report.floorplan;
-  if(fp)h+=`<details ${open["f-"+j.job_id]===false?"":"open"} ontoggle="tog('f-${j.job_id}',this.open)"><summary>Chip view: ${fp.logic_used} of ${fp.logic_total} logic tiles used</summary>
+  if(fp)h+=`<details ${open["f-"+j.job_id]?"open":""}ontoggle="tog('f-${j.job_id}',this.open)"><summary>Chip view: ${fp.logic_used} of ${fp.logic_total} logic tiles used</summary>
     <img class="chip" src="/api/jobs/${esc(j.job_id)}/floorplan.svg" alt="Floorplan of the chip showing where the design sits"></details>`;
   const id="d-"+j.job_id;
   h+=`<details ${open[id]?"open":""} ontoggle="tog('${id}',this.open)"><summary>Details</summary>${details(j)}</details>`;

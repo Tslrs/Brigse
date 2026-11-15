@@ -113,7 +113,8 @@ function simsView(d) {
   const sims = d.sims || [];
   if (!sims.length) return put("sims", '<div class="card mute">No simulations yet. Ask the agent to simulate your testbench.</div>');
   put("sims", sims.map(s => {
-    let h = `<div class="card"><div class="row"><div class="grow"><b>${esc(s.top || "simulation")}</b> <span class="mute small">${esc((s.sources || []).join(", "))}</span></div>
+    let h = `<div class="card"><div class="row"><div class="grow"><b>${esc(s.top || "simulation")}</b> <span class="mute small">${esc((s.sources || []).join(", "))}</span>
+      <div class="mute small">${esc(when(s.started))}</div></div>
       <span class="tag ${s.passed ? "ok" : "bad"}">${s.passed ? "passed" : s.compiled ? "failed" : "did not compile"}</span></div>`;
     if (s.has_waves) h += `<div class="row small" style="margin:8px 0;gap:8px">
         <button onclick="zoomWaves('${s.id}',0.5)">Zoom in</button><button onclick="zoomWaves('${s.id}',2)">Zoom out</button><button onclick="fitWaves('${s.id}')">Fit</button>
