@@ -227,11 +227,17 @@ h2{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--mute
 .mute{color:var(--mute)}.small{font-size:13px}
 .tag{display:inline-block;padding:2px 10px;border-radius:999px;background:var(--chip);font-size:12px;white-space:nowrap}
 .tag.ok{color:var(--ok)}.tag.bad{color:var(--bad)}.tag.warn{color:var(--warn)}.tag.run{color:var(--accent)}
-button{font:inherit;font-size:14px;border:1px solid var(--line);background:var(--card);color:var(--ink);
-border-radius:8px;padding:7px 14px;cursor:pointer}
+button{font:inherit;font-size:14px;font-weight:500;border:1px solid var(--line);background:var(--card);color:var(--ink);
+border-radius:10px;padding:8px 16px;cursor:pointer;box-shadow:0 1px 2px rgba(0,0,0,.12);
+transition:background .15s,border-color .15s,box-shadow .15s,transform .05s}
+button:hover:not(:disabled){border-color:var(--accent);background:color-mix(in srgb,var(--accent) 8%,var(--card))}
+button:active:not(:disabled){transform:translateY(1px);box-shadow:none}
+button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 select{font:inherit;font-size:14px;background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:7px 10px}
-button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+button.primary{background:linear-gradient(180deg,color-mix(in srgb,var(--accent) 88%,#fff),var(--accent));border-color:var(--accent);color:#fff;box-shadow:0 1px 3px color-mix(in srgb,var(--accent) 45%,transparent)}
+button.primary:hover:not(:disabled){background:linear-gradient(180deg,color-mix(in srgb,var(--accent) 94%,#fff),color-mix(in srgb,var(--accent) 92%,#000));border-color:var(--accent)}
 button.danger{color:var(--bad)}
+button.danger:hover:not(:disabled){border-color:var(--bad);background:color-mix(in srgb,var(--bad) 8%,var(--card))}
 button:disabled{opacity:.4;cursor:not-allowed;filter:grayscale(1)}
 #status{border-radius:12px;padding:12px 16px;margin-bottom:6px;display:flex;gap:10px;align-items:center}
 #status.idle{background:color-mix(in srgb,var(--ok) 14%,var(--card));border:1px solid color-mix(in srgb,var(--ok) 40%,var(--line))}
