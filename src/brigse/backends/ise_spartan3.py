@@ -19,7 +19,7 @@ import tarfile
 import time
 from pathlib import Path
 
-from .. import store
+from .. import diagnose, store
 from .base import Backend, BackendError
 
 VM = os.environ.get("BRIGSE_ISE_VM", "ise")
@@ -272,8 +272,10 @@ class IseSpartan3Backend(Backend):
         meta = json.loads(meta_path.read_text())
         out_dir = Path(meta["project_dir"]) / "build_out" / job_id
         if meta.get("fetched"):
+            report = self.report(out_dir)
             return {"job_id": job_id, "state": meta["state"], "steps": meta["steps"],
-                    "step_order": list(STEPS), "outputs_dir": str(out_dir), "report": self.report(out_dir)}
+                    "step_order": list(STEPS), "outputs_dir": str(out_dir), "report": report,
+                    "diagnosis": diagnose.analyse(self.name, out_dir, report, meta["state"])}
         if _vm_state() != "Running":
             raise BackendError(f"VM '{VM}' is not running, so job '{job_id}' cannot be inspected.")
 
@@ -310,7 +312,9 @@ class IseSpartan3Backend(Backend):
         state = "done" if done_rc == 0 else "failed"
         meta.update(fetched=True, state=state, steps=steps)
         meta_path.write_text(json.dumps(meta))
-        result.update(state=state, outputs_dir=str(out_dir), report=self.report(out_dir))
+        report = self.report(out_dir)
+        result.update(state=state, outputs_dir=str(out_dir), report=report,
+                      diagnosis=diagnose.analyse(self.name, out_dir, report, state))
         if done_rc != 0:
             result["error_tail"] = tail.strip().splitlines()[-6:]
         return result

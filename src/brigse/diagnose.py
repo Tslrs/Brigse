@@ -19,6 +19,7 @@ import re
 from pathlib import Path
 
 MAX_PROBLEMS = 6
+TOOL_DIRS = ("/share/yosys/", "/oss-cad-suite/", "/Gowin_EDA/", "/ISE_DS/")
 LOGS = {
     "ise": ["xst.log", "ngdbuild.log", "map.log", "par.log", "trce.log", "bitgen.log"],
     "oss": ["yosys.log", "nextpnr.log", "pack.log"],
@@ -173,6 +174,8 @@ def _from_logs(kind: str, out_dir: Path) -> list[dict]:
         if not path.is_file():
             continue
         for issue in PARSERS[kind](path.read_text(errors="replace")):
+            if issue["severity"] == "warning" and any(d in (issue.get("file") or "") for d in TOOL_DIRS):
+                continue               # a warning inside the tool's own library is not about your design
             rule, groups = _rule_for(issue["msg"])
             if rule is None:
                 if issue["severity"] != "error":

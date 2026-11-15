@@ -15,10 +15,12 @@ import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
-from . import actions, boards, installer, registry, store
+from . import actions, boards, installer, registry, store, vcd
 from .backends.base import BackendError
 
 DEFAULT_PORT = 8765
+WAVES_JS = Path(__file__).with_name("waves.js").read_text()
+_waves_cache: dict = {}
 TOKEN = secrets.token_urlsafe(24)
 _cache: dict = {"at": 0.0, "data": None}
 _lock = threading.Lock()
@@ -31,7 +33,7 @@ def _job_view(meta: dict, st: dict) -> dict:
             "can_rebuild": "args" in meta}
     view.update({k: st.get(k) for k in (
         "state", "steps", "step_order", "current_step", "current_step_seconds", "remaining_steps",
-        "log_tail", "error_tail", "outputs_dir", "report", "message")})
+        "log_tail", "error_tail", "outputs_dir", "report", "message", "diagnosis")})
     board = actions.board_for_part(meta["part"])
     has_bit = bool((st.get("report") or {}).get("bitstream"))
     view["load_target"] = board["name"] if board and has_bit and st.get("state") == "done" else None
@@ -62,6 +64,9 @@ def snapshot() -> dict:
             "selected_board": store.selected_board(),
             "requests": store.list_requests()[:10],
             "jobs": [_job_view(m, statuses[m["job_id"]]) for m in metas],
+            "sims": [{**{k: m.get(k) for k in ("id", "top", "sources", "passed", "compiled", "output", "note",
+                                                 "signals", "end_time", "timescale", "started")},
+                      "has_waves": bool(m.get("vcd") and Path(m["vcd"]).is_file())} for m in store.list_sims(3)],
             "busy": actions.busy(statuses),
             "last_program": store.get_state().get("last_program"),
             "now": time.time(),
@@ -108,9 +113,26 @@ class Handler(BaseHTTPRequestHandler):
         if not self._local():
             return self._json(403, {"error": "local access only"})
         if self.path == "/":
-            return self._send(200, PAGE.replace("__TOKEN__", TOKEN).encode(), "text/html; charset=utf-8")
+            return self._send(200, PAGE.replace("__TOKEN__", TOKEN).replace("__WAVES_JS__", WAVES_JS).encode(), "text/html; charset=utf-8")
         if self.path == "/api/state":
             return self._json(200, snapshot())
+        parts = self.path.strip("/").split("/")
+        if len(parts) == 4 and parts[:2] == ["api", "sims"] and parts[3] == "waves.json":
+            sim = store.get_sim(parts[2])
+            path = Path(sim["vcd"]) if sim and sim.get("vcd") else None
+            if not path or not path.is_file():
+                return self._json(404, {"error": "no recording for this simulation"})
+            key = (str(path), path.stat().st_mtime)
+            if key not in _waves_cache:
+                _waves_cache.clear()
+                _waves_cache[key] = vcd.to_json(vcd.parse(path))
+            return self._json(200, _waves_cache[key])
+        if len(parts) == 4 and parts[:2] == ["api", "jobs"] and parts[3] == "floorplan.svg":
+            job = store.get_job(parts[2])
+            svgs = sorted(Path(job["job_dir"]).glob("*.floorplan.svg")) if job else []
+            if not svgs:
+                return self._json(404, {"error": "no chip view for this build"})
+            return self._send(200, svgs[0].read_bytes(), "image/svg+xml")
         self._json(404, {"error": "not found"})
 
     def do_POST(self) -> None:
@@ -226,6 +248,10 @@ button:disabled{opacity:.4;cursor:not-allowed;filter:grayscale(1)}
 .step.run{background:color-mix(in srgb,var(--accent) 26%,var(--card));font-weight:600}
 .step.fail{background:color-mix(in srgb,var(--bad) 26%,var(--card))}
 pre{margin:8px 0 0;padding:8px;background:var(--chip);border-radius:6px;overflow-x:auto;font-size:12px;white-space:pre-wrap}
+.diag{margin-top:10px;padding:10px 12px;border-radius:8px;background:color-mix(in srgb,var(--warn) 12%,var(--card));border:1px solid color-mix(in srgb,var(--warn) 35%,var(--line))}
+.prob{margin-top:8px}
+.wave{width:100%;display:block;border:1px solid var(--line);border-radius:8px;cursor:crosshair;background:var(--card)}
+.chip{width:100%;height:auto;border-radius:8px;margin-top:8px;display:block}
 .bar{height:6px;background:var(--chip);border-radius:3px;overflow:hidden;min-width:80px}
 .bar>i{display:block;height:100%;background:var(--accent)}
 table{border-collapse:collapse;width:100%}td,th{text-align:left;padding:4px 10px 4px 0;font-size:13px;vertical-align:top}
@@ -239,6 +265,7 @@ details>summary{cursor:pointer;color:var(--mute);font-size:13px;margin-top:8px}
 <div id="approvals"></div>
 <h2>Board</h2><div id="boards"></div>
 <h2>Builds</h2><div id="jobs"></div>
+<h2>Simulations</h2><div id="sims"></div>
 <h2>Add-ons</h2><div id="backends"></div>
 </main><script>
 const TOKEN="__TOKEN__";
@@ -310,6 +337,14 @@ function details(j){
   if(r.bitstream)h+=`<div class="small mute" style="margin-top:6px">${esc(r.bitstream.path)}</div>`;
   h+=`<div class="small mute">Job ${esc(j.job_id)} · add-on ${esc(j.backend)} · started by ${who(j.by)}</div>`;
   return h;}
+function diagView(j){
+  const d=j.diagnosis;if(!d||!d.problems||!d.problems.length)return"";
+  const icon={error:"⛔",unexplained:"❓",silent:"⚠️",timing:"⏱️"};
+  return `<div class="diag"><div class="small"><b>${esc(d.verdict)}</b></div>`+d.problems.map(p=>`<div class="prob">
+    <div><span>${icon[p.kind]||""}</span> <b>${esc(p.title)}</b>${p.where?` <span class="mute small">${esc(p.where)}</span>`:""}</div>
+    ${p.explain?`<div class="small">${esc(p.explain)}</div>`:`<pre>${esc(p.raw)}</pre>`}
+    ${p.fix?`<div class="small mute">Fix: ${esc(p.fix)}</div>`:""}</div>`).join("")+
+    (d.more?`<div class="small mute">and ${d.more} more</div>`:"")+`</div>`;}
 function jobCard(j,busy){
   const done=new Map((j.steps||[]).map(s=>[s.step,s]));
   const cls={done:"ok",failed:"bad",running:"run",unknown:"warn"}[j.state]||"";
@@ -320,12 +355,17 @@ function jobCard(j,busy){
     else if(j.current_step===s){c="run";t=dur(j.current_step_seconds);}
     h+=`<div class="step ${c}">${esc(s)}<div class="small">${t||"&nbsp;"}</div></div>`;}
   h+=`</div><div class="row">${verdict(j)}<span class="grow"></span>`;
-  if(j.load_target)h+=btn("Load to board (temporary)","/api/jobs/"+j.job_id+"/load",busy,"primary");
+  const doubt=!!(j.diagnosis&&j.diagnosis.problems&&j.diagnosis.problems.length);
+  if(j.load_target)h+=btn("Load to board (temporary)","/api/jobs/"+j.job_id+"/load",busy,doubt?"":"primary",null,doubt?"This build has problems listed on the card. Load it to the board anyway? It goes to temporary memory only.":null);
   if(j.can_rebuild&&j.state!=="running")h+=btn("Build again","/api/jobs/"+j.job_id+"/rebuild",busy);
   h+="</div>";
   if(j.message)h+=`<div class="small mute" style="margin-top:6px">${esc(j.message)}</div>`;
-  const tail=j.error_tail||(j.state==="running"?j.log_tail:null);
+  h+=diagView(j);
+  const tail=(j.diagnosis&&j.diagnosis.problems&&j.diagnosis.problems.length)?null:(j.error_tail||(j.state==="running"?j.log_tail:null));
   if(tail&&tail.length)h+=`<pre>${esc(tail.join("\n"))}</pre>`;
+  const fp=j.report&&j.report.floorplan;
+  if(fp)h+=`<details ${open["f-"+j.job_id]===false?"":"open"} ontoggle="tog('f-${j.job_id}',this.open)"><summary>Chip view: ${fp.logic_used} of ${fp.logic_total} logic tiles used</summary>
+    <img class="chip" src="/api/jobs/${esc(j.job_id)}/floorplan.svg" alt="Floorplan of the chip showing where the design sits"></details>`;
   const id="d-"+j.job_id;
   h+=`<details ${open[id]?"open":""} ontoggle="tog('${id}',this.open)"><summary>Details</summary>${details(j)}</details>`;
   return h+"</div>";}
@@ -345,9 +385,10 @@ function backendsView(d){
     return `<div class="row" style="${i?"border-top:1px solid var(--line);margin-top:10px;padding-top:10px":""}">
       <div class="grow"><b>${esc(b.title)}</b><div class="small mute">${esc(b.detail)} ${esc(b.install_hint||"")}</div></div>
       <span class="tag ${s[1]}">${s[0]}</span>${b.buttons.map(x=>btn(label[x],"/api/backends/"+b.name+"/"+x,busy,x==="uninstall"?"danger":"",null,ask[x])).join("")}</div>`;}).join("")+"</div>");}
+__WAVES_JS__
 async function tick(){
   try{const d=await (await fetch("/api/state")).json();
-    statusView(d);approvals(d);boardsView(d);jobsView(d);backendsView(d);
+    statusView(d);approvals(d);boardsView(d);jobsView(d);simsView(d);backendsView(d);
     if(errAt&&Date.now()-errAt>12000)fail("");
   }catch(e){put("statusbox",'<div id="status" class="busy"><span class="dot"></span><div>The Brigse server is not reachable.</div></div>');}}
 tick();setInterval(tick,3000);

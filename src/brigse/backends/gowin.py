@@ -15,7 +15,7 @@ import tempfile
 import time
 from pathlib import Path
 
-from .. import oss_suite
+from .. import diagnose, floorplan, oss_suite
 from . import localjob
 from .base import Backend, BackendError
 
@@ -128,8 +128,16 @@ class GowinOssBackend(Backend):
     def build_status(self, job_id: str) -> dict:
         meta, st = localjob.status(job_id)
         if st["state"] != "running":
-            st["report"] = self.report(Path(meta["job_dir"]))
+            st["report"] = self._safe_report(Path(meta["job_dir"]))
+            st["diagnosis"] = diagnose.analyse(self.name, Path(meta["job_dir"]), st["report"], st["state"])
         return st
+
+    def _safe_report(self, out_dir: Path) -> dict:
+        """A failed build may have produced no report at all; that must not hide the diagnosis."""
+        try:
+            return self.report(out_dir)
+        except BackendError:
+            return {}
 
     def report(self, out_dir: Path) -> dict:
         out_dir = Path(out_dir).expanduser()
@@ -158,6 +166,9 @@ class GowinOssBackend(Backend):
                              "note": "Targets are nextpnr defaults unless the design sets clock constraints."}
         bits = sorted(out_dir.glob("*.fs"))
         rep["bitstream"] = {"path": str(bits[0]), "bytes": bits[0].stat().st_size} if bits else None
+        view = floorplan.make(out_dir)
+        if view:
+            rep["floorplan"] = view
         if not rep.get("synthesis") and not bits and "timing" not in rep:
             raise BackendError(f"No open-source Gowin build outputs found in {out_dir}")
         return rep
@@ -250,8 +261,16 @@ class GowinEdaBackend(Backend):
     def build_status(self, job_id: str) -> dict:
         meta, st = localjob.status(job_id)
         if st["state"] != "running":
-            st["report"] = self.report(Path(meta["job_dir"]))
+            st["report"] = self._safe_report(Path(meta["job_dir"]))
+            st["diagnosis"] = diagnose.analyse(self.name, Path(meta["job_dir"]), st["report"], st["state"])
         return st
+
+    def _safe_report(self, out_dir: Path) -> dict:
+        """A failed build may have produced no report at all; that must not hide the diagnosis."""
+        try:
+            return self.report(out_dir)
+        except BackendError:
+            return {}
 
     def report(self, out_dir: Path) -> dict:
         out_dir = Path(out_dir).expanduser()

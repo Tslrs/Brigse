@@ -1,0 +1,488 @@
+{
+"modules": {
+"top": {
+"cells": {
+"count_DFFR_Q_24_passthrough_lut$": {
+"type": "LUT4",
+"attributes": {
+"NEXTPNR_BEL": "X1Y14/LUT0"
+}
+},
+"count_DFFR_Q_4_passthrough_lut$": {
+"type": "LUT4",
+"attributes": {
+"NEXTPNR_BEL": "X4Y14/LUT0"
+}
+},
+"count_DFFR_Q_5_passthrough_lut$": {
+"type": "LUT4",
+"attributes": {
+"NEXTPNR_BEL": "X4Y16/LUT4"
+}
+},
+"count_DFFR_Q_7_passthrough_lut$": {
+"type": "LUT4",
+"attributes": {
+"NEXTPNR_BEL": "X4Y16/LUT3"
+}
+},
+"count_DFFR_Q_9_passthrough_lut$": {
+"type": "LUT4",
+"attributes": {
+"NEXTPNR_BEL": "X3Y14/LUT2"
+}
+},
+"count_DFFR_Q_1_passthrough_lut$": {
+"type": "LUT4",
+"attributes": {
+"NEXTPNR_BEL": "X5Y14/LUT1"
+}
+},
+"count_DFFR_Q_10_passthrough_lut$": {
+"type": "LUT4",
+"attributes": {
+"NEXTPNR_BEL": "X3Y16/LUT3"
+}
+},
+"count_DFFR_Q_12_passthrough_lut$": {
+"type": "LUT4",
+"attributes": {
+"NEXTPNR_BEL": "X3Y16/LUT5"
+}
+},
+"count_DFFR_Q_16_passthrough_lut$": {
+"type": "LUT4",
+"attributes": {
+"NEXTPNR_BEL": "X2Y14/LUT1"
+}
+},
+"count_DFFR_Q_19_passthrough_lut$": {
+"type": "LUT4",
+"attributes": {
+"NEXTPNR_BEL": "X2Y14/LUT5"
+}
+},
+"count_DFFR_Q_2_passthrough_lut$": {
+"type": "LUT4",
+"attributes": {
+"NEXTPNR_BEL": "X5Y15/LUT4"
+}
+},
+"count_DFFR_Q_D_ALU_SUM_DUMMY_ALULC": {
+"type": "ALU",
+"attributes": {
+"NEXTPNR_BEL": "X5Y15/ALU3"
+}
+},
+"count_DFFR_Q_24_D_ALU_SUM_CIN_ALU_COUT_HEAD_ALULC": {
+"type": "ALU",
+"attributes": {
+"NEXTPNR_BEL": "X1Y15/ALU0"
+}
+},
+"GSR": {
+"type": "GSR",
+"attributes": {
+"NEXTPNR_BEL": "X0Y0/GSR"
+}
+},
+"rst_n_IBUF_I_O_LUT1_I0": {
+"type": "LUT1",
+"attributes": {
+"NEXTPNR_BEL": "X1Y6/LUT2"
+}
+},
+"rst_n_IBUF_I": {
+"type": "IBUF",
+"attributes": {
+"NEXTPNR_BEL": "X0Y4/IOBA"
+}
+},
+"led_OBUF_O_I_LUT1_F": {
+"type": "LUT1",
+"attributes": {
+"NEXTPNR_BEL": "X4Y17/LUT0"
+}
+},
+"led_OBUF_O_3_I_LUT1_F": {
+"type": "LUT1",
+"attributes": {
+"NEXTPNR_BEL": "X2Y14/LUT0"
+}
+},
+"led_OBUF_O_3": {
+"type": "OBUF",
+"attributes": {
+"NEXTPNR_BEL": "X0Y14/IOBA"
+}
+},
+"led_OBUF_O_2_I_LUT1_F": {
+"type": "LUT1",
+"attributes": {
+"NEXTPNR_BEL": "X3Y15/LUT7"
+}
+},
+"led_OBUF_O_2": {
+"type": "OBUF",
+"attributes": {
+"NEXTPNR_BEL": "X0Y15/IOBB"
+}
+},
+"led_OBUF_O_1_I_LUT1_F": {
+"type": "LUT1",
+"attributes": {
+"NEXTPNR_BEL": "X1Y20/LUT3"
+}
+},
+"led_OBUF_O_1": {
+"type": "OBUF",
+"attributes": {
+"NEXTPNR_BEL": "X0Y20/IOBB"
+}
+},
+"led_OBUF_O": {
+"type": "OBUF",
+"attributes": {
+"NEXTPNR_BEL": "X0Y21/IOBB"
+}
+},
+"count_DFFR_Q_D_ALU_SUM": {
+"type": "ALU",
+"attributes": {
+"NEXTPNR_BEL": "X5Y15/ALU2"
+}
+},
+"count_DFFR_Q_9_D_ALU_SUM": {
+"type": "ALU",
+"attributes": {
+"NEXTPNR_BEL": "X3Y15/ALU5"
+}
+},
+"count_DFFR_Q_9": {
+"type": "DFFR",
+"attributes": {
+"NEXTPNR_BEL": "X3Y14/DFF2"
+}
+},
+"count_DFFR_Q_8_D_ALU_SUM": {
+"type": "ALU",
+"attributes": {
+"NEXTPNR_BEL": "X4Y15/ALU0"
+}
+},
+"count_DFFR_Q_8": {
+"type": "DFFR",
+"attributes": {
+"NEXTPNR_BEL": "X4Y15/DFF0"
+}
+},
+"count_DFFR_Q_7_D_ALU_SUM": {
+"type": "ALU",
+"attributes": {
+"NEXTPNR_BEL": "X4Y15/ALU1"
+}
+},
+"count_DFFR_Q_7": {
+"type": "DFFR",
+"attributes": {
+"NEXTPNR_BEL": "X4Y16/DFF3"
+}
+},
+"count_DFFR_Q_6_D_ALU_SUM": {
+"type": "ALU",
+"attributes": {
+"NEXTPNR_BEL": "X4Y15/ALU2"
+}
+},
+"count_DFFR_Q_6": {
+"type": "DFFR",
+"attributes": {
+"NEXTPNR_BEL": "X4Y15/DFF2"
+}
+},
+"count_DFFR_Q_5_D_ALU_SUM": {
+"type": "ALU",
+"attributes": {
+"NEXTPNR_BEL": "X4Y15/ALU3"
+}
+},
+"count_DFFR_Q_5": {
+"type": "DFFR",
+"attributes": {
+"NEXTPNR_BEL": "X4Y16/DFF4"
+}
+},
+"count_DFFR_Q_4_D_ALU_SUM": {
+"type": "ALU",
+"attributes": {
+"NEXTPNR_BEL": "X4Y15/ALU4"
+}
+},
+"count_DFFR_Q_4": {
+"type": "DFFR",
+"attributes": {
+"NEXTPNR_BEL": "X4Y14/DFF0"
+}
+},
+"count_DFFR_Q_3_D_ALU_SUM": {
+"type": "ALU",
+"attributes": {
+"NEXTPNR_BEL": "X4Y15/ALU5"
+}
+},
+"count_DFFR_Q_3": {
+"type": "DFFR",
+"attributes": {
+"NEXTPNR_BEL": "X4Y15/DFF5"
+}
+},
+"count_DFFR_Q_2_D_ALU_SUM": {
+"type": "ALU",
+"attributes": {
+"NEXTPNR_BEL": "X5Y15/ALU0"
+}
+},
+"count_DFFR_Q_25_D_LUT1_F": {
+"type": "LUT1",
+"attributes": {
+"NEXTPNR_BEL": "X1Y16/LUT0"
+}
+},
+"count_DFFR_Q_25": {
+"type": "DFFR",
+"attributes": {
+"NEXTPNR_BEL": "X1Y16/DFF0"
+}
+},
+"count_DFFR_Q_24_D_ALU_SUM_CIN_ALU_COUT": {
+"type": "ALU",
+"attributes": {
+"NEXTPNR_BEL": "X1Y15/ALU1"
+}
+},
+"count_DFFR_Q_24_D_ALU_SUM": {
+"type": "ALU",
+"attributes": {
+"NEXTPNR_BEL": "X1Y15/ALU2"
+}
+},
+"count_DFFR_Q_24": {
+"type": "DFFR",
+"attributes": {
+"NEXTPNR_BEL": "X1Y14/DFF0"
+}
+},
+"count_DFFR_Q_23_D_ALU_SUM": {
+"type": "ALU",
+"attributes": {
+"NEXTPNR_BEL": "X1Y15/ALU3"
+}
+},
+"count_DFFR_Q_23": {
+"type": "DFFR",
+"attributes": {
+"NEXTPNR_BEL": "X1Y15/DFF3"
+}
+},
+"count_DFFR_Q_22_D_ALU_SUM": {
+"type": "ALU",
+"attributes": {
+"NEXTPNR_BEL": "X1Y15/ALU4"
+}
+},
+"count_DFFR_Q_22": {
+"type": "DFFR",
+"attributes": {
+"NEXTPNR_BEL": "X1Y15/DFF4"
+}
+},
+"count_DFFR_Q_21_D_ALU_SUM": {
+"type": "ALU",
+"attributes": {
+"NEXTPNR_BEL": "X1Y15/ALU5"
+}
+},
+"count_DFFR_Q_21": {
+"type": "DFFR",
+"attributes": {
+"NEXTPNR_BEL": "X1Y15/DFF5"
+}
+},
+"count_DFFR_Q_20_D_ALU_SUM": {
+"type": "ALU",
+"attributes": {
+"NEXTPNR_BEL": "X2Y15/ALU0"
+}
+},
+"count_DFFR_Q_20": {
+"type": "DFFR",
+"attributes": {
+"NEXTPNR_BEL": "X2Y15/DFF0"
+}
+},
+"count_DFFR_Q_2": {
+"type": "DFFR",
+"attributes": {
+"NEXTPNR_BEL": "X5Y15/DFF4"
+}
+},
+"count_DFFR_Q_1_D_ALU_SUM": {
+"type": "ALU",
+"attributes": {
+"NEXTPNR_BEL": "X5Y15/ALU1"
+}
+},
+"count_DFFR_Q_19_D_ALU_SUM": {
+"type": "ALU",
+"attributes": {
+"NEXTPNR_BEL": "X2Y15/ALU1"
+}
+},
+"count_DFFR_Q_19": {
+"type": "DFFR",
+"attributes": {
+"NEXTPNR_BEL": "X2Y14/DFF5"
+}
+},
+"$PACKER_GND_DRV": {
+"type": "GOWIN_GND",
+"attributes": {
+"NEXTPNR_BEL": "X0Y0/GND"
+}
+},
+"$PACKER_VCC_DRV": {
+"type": "GOWIN_VCC",
+"attributes": {
+"NEXTPNR_BEL": "X0Y0/VCC"
+}
+},
+"count_DFFR_Q_18_D_ALU_SUM": {
+"type": "ALU",
+"attributes": {
+"NEXTPNR_BEL": "X2Y15/ALU2"
+}
+},
+"count_DFFR_Q_18": {
+"type": "DFFR",
+"attributes": {
+"NEXTPNR_BEL": "X2Y15/DFF2"
+}
+},
+"count_DFFR_Q_17_D_ALU_SUM": {
+"type": "ALU",
+"attributes": {
+"NEXTPNR_BEL": "X2Y15/ALU3"
+}
+},
+"count_DFFR_Q_17": {
+"type": "DFFR",
+"attributes": {
+"NEXTPNR_BEL": "X2Y15/DFF3"
+}
+},
+"count_DFFR_Q_16_D_ALU_SUM": {
+"type": "ALU",
+"attributes": {
+"NEXTPNR_BEL": "X2Y15/ALU4"
+}
+},
+"count_DFFR_Q_16": {
+"type": "DFFR",
+"attributes": {
+"NEXTPNR_BEL": "X2Y14/DFF1"
+}
+},
+"count_DFFR_Q_15_D_ALU_SUM": {
+"type": "ALU",
+"attributes": {
+"NEXTPNR_BEL": "X2Y15/ALU5"
+}
+},
+"count_DFFR_Q_15": {
+"type": "DFFR",
+"attributes": {
+"NEXTPNR_BEL": "X2Y15/DFF5"
+}
+},
+"count_DFFR_Q_14_D_ALU_SUM": {
+"type": "ALU",
+"attributes": {
+"NEXTPNR_BEL": "X3Y15/ALU0"
+}
+},
+"count_DFFR_Q_14": {
+"type": "DFFR",
+"attributes": {
+"NEXTPNR_BEL": "X3Y15/DFF0"
+}
+},
+"count_DFFR_Q_13_D_ALU_SUM": {
+"type": "ALU",
+"attributes": {
+"NEXTPNR_BEL": "X3Y15/ALU1"
+}
+},
+"count_DFFR_Q_13": {
+"type": "DFFR",
+"attributes": {
+"NEXTPNR_BEL": "X3Y15/DFF1"
+}
+},
+"count_DFFR_Q_12_D_ALU_SUM": {
+"type": "ALU",
+"attributes": {
+"NEXTPNR_BEL": "X3Y15/ALU2"
+}
+},
+"count_DFFR_Q_12": {
+"type": "DFFR",
+"attributes": {
+"NEXTPNR_BEL": "X3Y16/DFF5"
+}
+},
+"count_DFFR_Q_11_D_ALU_SUM": {
+"type": "ALU",
+"attributes": {
+"NEXTPNR_BEL": "X3Y15/ALU3"
+}
+},
+"count_DFFR_Q_11": {
+"type": "DFFR",
+"attributes": {
+"NEXTPNR_BEL": "X3Y15/DFF3"
+}
+},
+"count_DFFR_Q_10_D_ALU_SUM": {
+"type": "ALU",
+"attributes": {
+"NEXTPNR_BEL": "X3Y15/ALU4"
+}
+},
+"count_DFFR_Q_10": {
+"type": "DFFR",
+"attributes": {
+"NEXTPNR_BEL": "X3Y16/DFF3"
+}
+},
+"count_DFFR_Q_1": {
+"type": "DFFR",
+"attributes": {
+"NEXTPNR_BEL": "X5Y14/DFF1"
+}
+},
+"count_DFFR_Q": {
+"type": "DFFR",
+"attributes": {
+"NEXTPNR_BEL": "X5Y15/DFF2"
+}
+},
+"clk_IBUF_I": {
+"type": "IBUF",
+"attributes": {
+"NEXTPNR_BEL": "X46Y16/IOBA"
+}
+}
+}
+}
+}
+}

@@ -205,6 +205,37 @@ def build_status(job_id: str, wait_seconds: int = 0) -> dict:
 
 
 @mcp.tool()
+def diagnose(outputs_dir: str, backend: str | None = None) -> dict:
+    """Explain why a build failed, or what needs attention in one that finished.
+
+    Reads the logs in a build output folder and returns the problems in plain words, each with
+    where it is, why it happens and how to fix it. Messages Brigse has no explanation for are
+    returned as 'unexplained', in the tool's own words. Also catches mistakes the tools let through:
+    a mistyped signal name that still builds, a constraint that matches no port, a port with no pin.
+    build_status already includes this for finished builds; use this tool on an older folder.
+
+    backend: the add-on that produced the folder; detected from the files when omitted.
+    """
+    def run():
+        folder = Path(outputs_dir).expanduser()
+        names = {"ise_spartan3": "xst.log", "gowin_oss": "yosys.log", "gowin_eda": "gowin_eda.log"}
+        chosen = backend or next((b for b, f in names.items() if (folder / f).is_file()), None)
+        if not chosen:
+            raise BackendError(f"No known build logs found in {folder}")
+        b = registry.by_name(chosen)
+        try:
+            rep = b.report(folder)
+        except BackendError:
+            rep = {}
+        failed = not (rep.get("bitstream"))
+        from . import diagnose as engine
+        d = engine.analyse(chosen, folder, rep, "failed" if failed else "done")
+        return {"backend": chosen, "build_failed": failed,
+                "diagnosis": d or {"verdict": "Nothing to report: no problems found in the logs.", "problems": []}}
+    return _guard(run)
+
+
+@mcp.tool()
 def report(outputs_dir: str, backend: str | None = None) -> dict:
     """Summarise the reports in a build output folder: utilisation, timing, failing constraints, bitstream.
 
@@ -226,13 +257,30 @@ def report(outputs_dir: str, backend: str | None = None) -> dict:
 # ---- simulate / program ---------------------------------------------------
 @mcp.tool()
 def simulate(sources: list[str], top: str | None = None, cwd: str | None = None,
-             timeout_s: int = 60) -> dict:
+             timeout_s: int = 60, waves: bool = True) -> dict:
     """Compile and run a Verilog testbench with Icarus Verilog.
 
-    sources: files relative to cwd, testbench included. top: testbench module, if ambiguous.
-    The run passes when the simulator exits 0 and prints no FAIL/ERROR text.
+    sources: files relative to cwd, testbench included. top: testbench module (guessed when exactly
+    one module is named like a testbench). The run passes when the simulator exits 0 and prints no
+    FAIL/ERROR text. With waves=true every signal is recorded, with no change to the testbench: the
+    user sees it as a diagram in the dashboard, and you read it with the waves tool.
     """
-    return _guard(lambda: core.simulate(sources, top, cwd, timeout_s))
+    return _guard(lambda: actions.simulate(sources, top, cwd, timeout_s, waves, by="agent"))
+
+
+@mcp.tool()
+def waves(sim_id: str, signals: list[str] | None = None, start: int = 0, end: int | None = None,
+          max_rows: int = 40, sample_on: str | None = None) -> dict:
+    """Read the recorded signals of a simulation as text: what changed, and when.
+
+    sim_id: from simulate. signals: names to include (a name matches the end of the full path, e.g.
+    'led' or 'dut.count'); all signals when omitted, up to 24. start/end: time range in the
+    simulation's own unit (see timescale). Each row lists only the signals that changed at that time.
+    sample_on: name of the clock; gives one row per rising edge with the value of every signal just
+    after it, which is the natural way to read a synchronous design.
+    Use it to find where a failing testbench diverges from what you expect.
+    """
+    return _guard(lambda: actions.waves(sim_id, signals, start, end, max_rows, sample_on))
 
 
 @mcp.tool()

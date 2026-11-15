@@ -16,6 +16,7 @@ HOME = Path(os.environ.get("BRIGSE_HOME", Path.home() / ".brigse"))
 JOBS = HOME / "jobs"
 REQUESTS = HOME / "requests"
 LOCKS = HOME / "locks"
+SIMS = HOME / "sims"
 STATE = HOME / "state.json"
 
 
@@ -164,3 +165,30 @@ def lock(name: str, by: str, what: str):
         yield None
     finally:
         path.unlink(missing_ok=True)
+
+
+# ---- simulations ----------------------------------------------------------
+def save_sim(sim_id: str, meta: dict) -> None:
+    _write(SIMS / sim_id / "sim.json", meta)
+
+
+def get_sim(sim_id: str) -> dict | None:
+    if not sim_id.replace("-", "").isalnum():
+        return None
+    return _read(SIMS / sim_id / "sim.json") or None
+
+
+def list_sims(limit: int = 3) -> list[dict]:
+    if not SIMS.is_dir():
+        return []
+    sims = [_read(p) for p in SIMS.glob("*/sim.json")]
+    return sorted((m for m in sims if m), key=lambda m: m["started"], reverse=True)[:limit]
+
+
+def prune_sims(keep: int = 20) -> None:
+    """Recordings can be large: keep only the newest ones."""
+    import shutil
+    if not SIMS.is_dir():
+        return
+    for old in sorted(SIMS.iterdir(), key=lambda p: p.name, reverse=True)[keep:]:
+        shutil.rmtree(old, ignore_errors=True)

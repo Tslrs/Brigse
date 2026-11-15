@@ -33,6 +33,8 @@ the user can approve it there. Vendor tools and licences are never downloaded by
 | Spartan-3A (ISE) | Builds of a small example and of the Next186 SoC; the SoC bitstream matched a reference build | Loading onto the board from macOS (not supported yet) |
 | Gowin, vendor tool | Build, then a temporary load onto a Tang Nano 9K; LEDs seen blinking | Other Gowin boards and parts |
 | Gowin, open-source | Install after approval, build, uninstall (on a test folder) | Its bitstream on a real board |
+| Error explainer | 18 real failures from the three toolchains, plus 2 good builds that must stay quiet (`tests/test_diagnose.py`, no vendor tools needed) | Errors outside this list are reported unexplained |
+| Waveforms and chip view | Recording, text view, dashboard endpoint (`tests/test_waves.py`); chip view against a real placement (`tests/test_floorplan.py`); both also looked at in a browser | Large recordings (capped at 60 000 changes), other Gowin chips for the chip view (only the 9K was checked) |
 | Dashboard and approvals | Board choice, approve/reject, buttons refused while something runs | Browsers other than the one used in development |
 | Platforms | macOS 27 on Apple Silicon | Linux, Windows, Intel Macs |
 
@@ -74,8 +76,10 @@ The name is short for *Bridge to Semiconductor*, and it sounds like βρύση, 
 | `list_backends` | Installed and planned add-ons, the parts each covers, and their state |
 | `build` | Starts synthesis-to-bitstream as a background job, returns a `job_id` |
 | `build_status` | Progress per step; when finished, fetches outputs and returns the report |
+| `diagnose` | Explains a failed build in plain words (where, why, how to fix) and catches mistakes the tools let through |
 | `report` | Utilisation, timing, failing constraints and bitstream from an output folder |
-| `simulate` | Compiles and runs a Verilog testbench with Icarus Verilog |
+| `simulate` | Compiles and runs a Verilog testbench with Icarus Verilog and records every signal, with no change to the testbench |
+| `waves` | Reads a recording as text for an agent: what changed and when, or one row per clock edge |
 | `detect_boards` | USB probes and the JTAG chain (openFPGALoader) |
 | `program` | Loads a bitstream; a dry run unless `confirm=true` |
 | `backend_control` | Start/stop an add-on's runtime (the ISE VM) |
@@ -83,6 +87,28 @@ The name is short for *Bridge to Semiconductor*, and it sounds like βρύση, 
 | `list_boards`, `select_board` | Known boards and the one selected |
 | `request_install`, `request_uninstall`, `install_status` | Ask the user to approve installing or removing an add-on |
 | `dashboard_info` | Address of the local window |
+
+## Error explainer
+
+When a build fails, `build_status` and `diagnose` return the cause instead of thousands of log lines:
+where it is, why it happens, how to fix it. The rules were written from output the real tools printed
+when a design was broken on purpose; a message with no rule is passed on unexplained, never guessed at.
+
+It also catches mistakes the tools let through. The open-source Gowin flow builds a design whose
+signal name was mistyped (only a warning) and ignores a constraint for a name that is not in the
+design; Gowin EDA silently puts a port with no pin constraint on a pin of its own. A failing timing
+constraint is traced to its slowest path (ISE).
+
+## Seeing what the tools did
+
+- **Waveforms.** `simulate` records every signal. The dashboard draws them (zoom, drag, a cursor that
+  shows each value, hex/binary/decimal); the `waves` tool gives an agent the same data as text, for
+  example one row per rising clock edge.
+- **Chip view.** For builds made with the open-source Gowin flow, the dashboard draws the chip as a grid
+  of tiles and colours the ones that hold your design: logic, pins, block RAM, multipliers. It is drawn
+  from the placement nextpnr wrote and the chip database that ships with the tools. Gowin EDA's own
+  placement cannot be read outside its GUI, so its builds have no chip view. `examples/tangnano9k_demo`
+  is a design that uses logic, block RAM and a multiplier, to show what a fuller chip looks like.
 
 ## The window
 

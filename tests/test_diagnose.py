@@ -2,6 +2,8 @@
 
 usage: uv run python tests/test_diagnose.py
 """
+import shutil
+import tempfile
 from pathlib import Path
 
 from brigse import diagnose, registry
@@ -9,7 +11,7 @@ from brigse.backends.base import BackendError
 
 FX = Path(__file__).resolve().parent / "fixtures"
 BACKEND = {"ise": "ise_spartan3", "oss": "gowin_oss", "eda": "gowin_eda", "good_oss": "gowin_oss",
-           "good_eda": "gowin_eda"}
+           "good_eda": "gowin_eda", "good_oss_demo": "gowin_oss"}
 
 
 def run(case: str, state: str):
@@ -61,7 +63,7 @@ for case, (state, want_rules, want_where, want_title) in EXPECT.items():
         failures.append(case)
 
 # a good build must stay quiet
-for case in ("good_oss", "good_eda"):
+for case in ("good_oss", "good_eda", "good_oss_demo"):
     d = run(case, "done")
     print(("ok   " if d is None else "FAIL ") + case + " stays quiet")
     if d is not None:
@@ -76,10 +78,11 @@ if not ok:
     failures.append("ise_timing_impossible")
 
 # a message with no rule is passed on unexplained, never guessed at
-out = FX / "unknown_error"
-(out / "build_out" / "job").mkdir(parents=True, exist_ok=True)
-(out / "build_out" / "job" / "xst.log").write_text("ERROR:Xst:9999 - Something nobody wrote a rule for.\n")
-d = diagnose.analyse("ise_spartan3", out / "build_out" / "job", {}, "failed")
+scratch = Path(tempfile.mkdtemp())
+(scratch / "build_out" / "job").mkdir(parents=True)
+(scratch / "build_out" / "job" / "xst.log").write_text("ERROR:Xst:9999 - Something nobody wrote a rule for.\n")
+d = diagnose.analyse("ise_spartan3", scratch / "build_out" / "job", {}, "failed")
+shutil.rmtree(scratch, ignore_errors=True)
 ok = d and d["problems"][0]["kind"] == "unexplained" and d["problems"][0]["explain"] is None
 print(("ok   " if ok else "FAIL ") + "unknown message is reported as unexplained")
 if not ok:

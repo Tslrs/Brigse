@@ -28,8 +28,18 @@ def _proc(args: list[str], cwd: Path | None, timeout: int) -> tuple[int | None, 
         return None, out
 
 
-def simulate(sources: list[str], top: str | None, cwd: str | None, timeout_s: int) -> dict:
-    """Compile with Icarus Verilog and run the testbench."""
+def _guess_top(base: Path, sources: list[str]) -> str | None:
+    """The testbench: the only module whose name looks like one (tb_x, x_tb, test_x, x_test)."""
+    names = []
+    for src in sources:
+        names += re.findall(r"^\s*module\s+(\w+)", (base / src).read_text(errors="replace"), re.M)
+    bench = [n for n in names if re.search(r"^(tb_|test)|(_tb|_test)$", n, re.I)]
+    return bench[0] if len(bench) == 1 else None
+
+
+def simulate(sources: list[str], top: str | None, cwd: str | None, timeout_s: int,
+             waves_dir: Path | None = None) -> dict:
+    """Compile with Icarus Verilog and run the testbench, optionally recording every signal."""
     iverilog = _need("iverilog", "brew install icarus-verilog")
     vvp = _need("vvp", "brew install icarus-verilog")
     base = Path(cwd).expanduser().resolve() if cwd else Path.cwd()
@@ -39,20 +49,53 @@ def simulate(sources: list[str], top: str | None, cwd: str | None, timeout_s: in
     if not sources or missing:
         raise BackendError(f"Source files not found in {base}: {missing or 'none given'}")
 
+    note, record = None, None
+    if waves_dir is not None:
+        top = top or _guess_top(base, sources)
+        if top:
+            waves_dir.mkdir(parents=True, exist_ok=True)
+            record = waves_dir / "waves.vcd"
+        else:
+            note = "pass `top` (the testbench module) to record waveforms"
+    before = {p: p.stat().st_mtime for p in base.glob("*.vcd")}
+
     with tempfile.TemporaryDirectory() as tmp:
         image = str(Path(tmp) / "sim.vvp")
-        args = [iverilog, "-g2012", "-o", image] + (["-s", top] if top else []) + sources
-        rc, out = _proc(args, base, 120)
+        extra = []
+        if record:
+            dump = Path(tmp) / "brigse_dump.v"
+            dump.write_text(f"module brigse_dump;\n  initial begin\n    $dumpfile(\"{record}\");\n"
+                            f"    $dumplimit(30000000);\n    $dumpvars(0, {top});\n  end\nendmodule\n")
+            extra = [str(dump)]
+        roots = ["-s", top, "-s", "brigse_dump"] if record else (["-s", top] if top else [])
+        rc, out = _proc([iverilog, "-g2012", "-o", image] + roots + sources + extra, base, 120)
         if rc != 0:
             return {"compiled": False, "passed": False, "output": out[-TAIL:]}
         rc, out = _proc([vvp, "-n", image], base, max(1, min(timeout_s, 600)))
 
+    result: dict
     if rc is None:
-        return {"compiled": True, "passed": False, "timed_out": True,
-                "output": out[-TAIL:], "hint": "Does the testbench call $finish?"}
-    failed = bool(re.search(r"\b(FAIL(ED)?|ERROR|ASSERT(ION)? FAILED)\b", out)) or rc != 0
-    return {"compiled": True, "passed": not failed, "exit_code": rc, "output": out[-TAIL:],
-            "pass_rule": "exit code 0 and no FAIL/ERROR text in the output"}
+        result = {"compiled": True, "passed": False, "timed_out": True, "output": out[-TAIL:],
+                  "hint": "Does the testbench call $finish?"}
+    else:
+        failed = bool(re.search(r"\b(FAIL(ED)?|ERROR|ASSERT(ION)? FAILED)\b", out)) or rc != 0
+        result = {"compiled": True, "passed": not failed, "exit_code": rc, "output": out[-TAIL:],
+                  "pass_rule": "exit code 0 and no FAIL/ERROR text in the output"}
+    out = "\n".join(l for l in out.splitlines() if not l.startswith("VCD info:")) + "\n"
+    if isinstance(result.get("output"), str):
+        result["output"] = out[-TAIL:]
+    if record and not record.is_file():
+        # the testbench started its own dump first; take the file it wrote
+        for vcd in base.glob("*.vcd"):
+            if vcd.stat().st_mtime > before.get(vcd, 0):
+                shutil.copyfile(vcd, record)
+                break
+    result["top"] = top
+    if record and record.is_file():
+        result["vcd"] = str(record)
+    elif note:
+        result["waves_note"] = note
+    return result
 
 
 def detect_boards(cable: str | None) -> dict:

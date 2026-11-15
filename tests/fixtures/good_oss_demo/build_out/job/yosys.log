@@ -1,0 +1,14 @@
+/opt/oss-cad-suite/libexec/../share/yosys/gowin/brams_map.v:215: Warning: Range [7:0] select out of bounds on signal `\PORT_A_WR_DATA': Setting 4 MSB bits to undef.
+/opt/oss-cad-suite/libexec/../share/yosys/gowin/brams_map.v:215: Warning: Range select [16:9] out of bounds on signal `\PORT_A_WR_DATA': Setting all 8 result bits to undef.
+/opt/oss-cad-suite/libexec/../share/yosys/gowin/brams_map.v:215: Warning: Range select [25:18] out of bounds on signal `\PORT_A_WR_DATA': Setting all 8 result bits to undef.
+/opt/oss-cad-suite/libexec/../share/yosys/gowin/brams_map.v:215: Warning: Range select [34:27] out of bounds on signal `\PORT_A_WR_DATA': Setting all 8 result bits to undef.
+/opt/oss-cad-suite/libexec/../share/yosys/gowin/brams_map.v:216: Warning: Range [7:0] select out of bounds on signal `\PORT_B_WR_DATA': Setting 4 MSB bits to undef.
+/opt/oss-cad-suite/libexec/../share/yosys/gowin/brams_map.v:216: Warning: Range select [16:9] out of bounds on signal `\PORT_B_WR_DATA': Setting all 8 result bits to undef.
+/opt/oss-cad-suite/libexec/../share/yosys/gowin/brams_map.v:216: Warning: Range select [25:18] out of bounds on signal `\PORT_B_WR_DATA': Setting all 8 result bits to undef.
+/opt/oss-cad-suite/libexec/../share/yosys/gowin/brams_map.v:216: Warning: Range select [34:27] out of bounds on signal `\PORT_B_WR_DATA': Setting all 8 result bits to undef.
+/opt/oss-cad-suite/libexec/../share/yosys/gowin/brams_map.v:220: Warning: Range select [23:16] out of bounds on signal `\genblk1.DOA': Setting all 8 result bits to undef.
+/opt/oss-cad-suite/libexec/../share/yosys/gowin/brams_map.v:220: Warning: Range select [31:24] out of bounds on signal `\genblk1.DOA': Setting all 8 result bits to undef.
+/opt/oss-cad-suite/libexec/../share/yosys/gowin/brams_map.v:221: Warning: Range select [23:16] out of bounds on signal `\genblk1.DOB': Setting all 8 result bits to undef.
+/opt/oss-cad-suite/libexec/../share/yosys/gowin/brams_map.v:221: Warning: Range select [31:24] out of bounds on signal `\genblk1.DOB': Setting all 8 result bits to undef.
+ABC: Warning: The network is combinational.
+Warnings: 12 unique messages, 12 total

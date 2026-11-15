@@ -15,3 +15,6 @@ __pycache__/
 *.egg-info/
 uv.lock
 .DS_Store
+
+# Test fixtures are real tool output on purpose
+!tests/fixtures/**/build_out/
