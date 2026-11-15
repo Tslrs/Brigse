@@ -386,7 +386,7 @@ function jobsView(d){
   const busy=d.busy.length>0;
   if(!d.jobs.length)return put("jobs",'<div class="card mute">No builds yet. Ask the agent to build your design.</div>');
   let h=jobCard(d.jobs[0],busy);
-  if(d.jobs.length>1)h+=`<details ${open.older?"open":""} ontoggle="tog('older',this.open)"><summary>${d.jobs.length-1} earlier build${d.jobs.length>2?"s":""}</summary>
+  if(d.jobs.length>1)h+=`<details ${open.older===false?"":"open"} ontoggle="tog('older',this.open)"><summary>${d.jobs.length-1} earlier build${d.jobs.length>2?"s":""}</summary>
     <div style="margin-top:8px">${d.jobs.slice(1).map(j=>jobCard(j,busy)).join("")}</div></details>`;
   put("jobs",h);}
 function backendsView(d){
