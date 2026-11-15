@@ -142,11 +142,17 @@ brew install uv icarus-verilog openfpgaloader
 git clone https://github.com/Tslrs/Brigse.git ~/brigse && cd ~/brigse && uv sync
 ```
 
-Register it with Claude Code:
+Connect it to your AI app with one command. It adds only its own entry, keeps your other servers,
+saves the old file as `.bak`, and then starts Brigse the way the app will, to check that it answers:
 
 ```bash
-claude mcp add fpga -- uv --directory ~/brigse run brigse
+uv run brigse install-agent antigravity     # or: claude-desktop, claude-code, --all
+uv run brigse install-agent --all --dry-run # show what would change, write nothing
 ```
+
+Then restart the app. Builds can be long (an ISE build takes about 25-30 minutes), so every
+`build` and `build_status` answer carries a `next` field that tells the agent what to do: ask
+again in 50 seconds, or, when it is finished, read the report and the diagnosis before saying it worked.
 
 ## Add-ons
 

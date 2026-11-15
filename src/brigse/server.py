@@ -17,8 +17,12 @@ PORT = int(os.environ.get("BRIGSE_PORT", dashboard.DEFAULT_PORT))
 
 mcp = FastMCP("brigse", instructions=(
     "Build, inspect, simulate and program FPGA designs. Call list_backends and list_boards first. "
-    "build starts a background job and returns a job_id; poll build_status until state is 'done' "
-    "or 'failed'. program writes to hardware only when confirm=true. Installing an add-on needs "
+    "build starts a background job and returns a job_id. Some builds are long (Xilinx ISE: about "
+    "25-30 minutes, plus about 90 seconds to start the VM; Gowin: seconds). Keep calling "
+    "build_status with wait_seconds=50 until state is 'done' or 'failed'; every answer has a "
+    "'next' field that says what to do. Do not start the same build again while one is running, "
+    "and tell the user once that a long build is running and where the dashboard is. When it is "
+    "done, read the report and the diagnosis, and only then say whether it worked. program writes to hardware only when confirm=true. Installing an add-on needs "
     "the user's approval: call request_install, tell the user to open the dashboard, then poll "
     "install_status. Only the user can approve, in the dashboard. If a request is rejected, stop: "
     "do not retry it or work around it."))
@@ -165,6 +169,26 @@ def backend_control(backend: str, action: str) -> dict:
 
 
 # ---- build ----------------------------------------------------------------
+TYPICAL = {"ise_spartan3": "about 25-30 minutes (the VM needs about 90 s to start first)",
+           "gowin_eda": "a few seconds", "gowin_oss": "a few seconds"}
+
+
+def _next_step(st: dict, backend: str) -> str:
+    """Tell the agent in plain words what to do after this answer."""
+    state = st.get("state")
+    if state == "running":
+        step = st.get("current_step") or "starting"
+        return (f"Still running (step: {step}). A build on this add-on takes {TYPICAL.get(backend, 'a while')}. "
+                "Call build_status again with wait_seconds=50. Do not start another build.")
+    if state == "done":
+        return ("Finished. Read 'report' (timing, utilization) and 'diagnosis' (problems in plain words) before "
+                "you tell the user it worked. Timing not met or listed problems mean it did not fully work. "
+                "To put it on a board use program with confirm=false first, then ask the user.")
+    if state == "failed":
+        return "Failed. Read 'diagnosis' for the cause and the fix, correct the sources, then build again."
+    return "State is unclear. Call build_status again; if it stays unclear, tell the user and point to the dashboard."
+
+
 @mcp.tool()
 def build(project_dir: str, top: str, part: str | None = None,
           sources: list[str] | None = None, constraints: str | None = None,
@@ -181,7 +205,12 @@ def build(project_dir: str, top: str, part: str | None = None,
     backend: force a specific add-on. By default the usable add-on with the highest priority is
           used (the vendor tool when the user has it, otherwise the open-source flow).
     """
-    return _guard(lambda: actions.start_build(project_dir, top, part, sources, constraints, backend, by="agent"))
+    def run():
+        r = actions.start_build(project_dir, top, part, sources, constraints, backend, by="agent")
+        be = r.get("backend") or ""
+        return {**r, "typical_duration": TYPICAL.get(be, "unknown"),
+                "next": "Build started. Call build_status with this job_id and wait_seconds=50, and repeat until it is done or failed."}
+    return _guard(run)
 
 
 @mcp.tool()
@@ -189,6 +218,7 @@ def build_status(job_id: str, wait_seconds: int = 0) -> dict:
     """Report a build job's progress; when it has finished, fetch the outputs and return the report.
 
     wait_seconds: wait up to this long (max 50) for the job to finish before answering.
+    The answer has a 'next' field: what to do now (ask again, or how to check the result).
     """
     def run():
         meta_path = store.JOBS / f"{job_id}.json"
@@ -199,7 +229,7 @@ def build_status(job_id: str, wait_seconds: int = 0) -> dict:
         while True:
             st = backend.build_status(job_id)
             if st["state"] != "running" or time.time() >= deadline:
-                return st
+                return {**st, "next": _next_step(st, backend.name)}
             time.sleep(5)
     return _guard(run)
 
@@ -322,6 +352,9 @@ def program(bitstream: str, cable: str | None = None, board: str | None = None,
 
 
 def main() -> None:
+    if sys.argv[1:2] == ["install-agent"]:
+        from . import connect
+        raise SystemExit(connect.run(sys.argv[2:]))
     if sys.argv[1:2] == ["dashboard"]:
         if dashboard.port_in_use(PORT):
             print(f"Dashboard already running at {dashboard.url(PORT)}")
