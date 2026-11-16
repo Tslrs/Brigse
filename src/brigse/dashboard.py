@@ -202,7 +202,11 @@ def start_in_background(port: int = DEFAULT_PORT) -> bool:
     """Start the dashboard inside the MCP server process unless one is already running."""
     if port_in_use(port):
         return False
-    threading.Thread(target=serve, args=(port,), daemon=True).start()
+    try:
+        server = ThreadingHTTPServer(("127.0.0.1", port), Handler)   # bind here, so the port is open when we return
+    except OSError:
+        return False                                                # someone took it a moment ago
+    threading.Thread(target=server.serve_forever, daemon=True).start()
     return True
 
 
