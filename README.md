@@ -83,6 +83,7 @@ The name is short for *Bridge to Semiconductor*, and it sounds like βρύση, 
 | `report` | Utilisation, timing (slack, and per clock its Fmax against the required frequency), failing constraints and bitstream from an output folder |
 | `lint` | Checks Verilog in about a second with Verilator (syntax, undeclared names, widths, latches), each issue with file, line and source; run before a build that takes minutes. Falls back to Icarus Verilog's parser |
 | `simulate` | Compiles and runs a Verilog testbench with Icarus Verilog and records every signal, with no change to the testbench |
+| `cocotb_test` | Tests Verilog with a Python testbench ([cocotb](https://www.cocotb.org)) on Icarus Verilog: one row per test, with the assertion message of each failure. Needs `brigse install-cocotb` once |
 | `waves` | Reads a recording as text for an agent: what changed and when, or one row per clock edge |
 | `detect_boards` | USB probes and the JTAG chain (openFPGALoader) |
 | `program` | Loads a bitstream; a dry run unless `confirm=true` |
@@ -166,6 +167,7 @@ uv run brigse status            # board, builds with time and timing, simulation
 uv run brigse status --watch    # the same, refreshing every 3 seconds
 uv run brigse approvals         # answer the agent's requests: approve, reject or skip
 uv run brigse dashboard         # open the full window in the browser
+uv run brigse install-cocotb    # once, to use Python testbenches: a small separate environment, about 40 MB
 ```
 
 `approvals` only works in a real terminal and needs the whole word typed. When it is run from

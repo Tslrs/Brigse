@@ -331,6 +331,22 @@ def lint(cwd: str, sources: list[str] | None = None, top: str | None = None, str
 
 
 @mcp.tool()
+def cocotb_test(cwd: str, sources: list[str], toplevel: str, test_module: str, testcase: str | None = None,
+                parameters: dict | None = None, timeout_s: int = 120) -> dict:
+    """Test Verilog with a Python testbench (cocotb) and Icarus Verilog.
+
+    Write the test as Python: an `async def` decorated with @cocotb.test(), which drives the design's
+    signals (dut.clk, dut.rst, dut.led ...) with `await RisingEdge(dut.clk)` and checks them with assert.
+    cwd: project folder. sources: Verilog files relative to it (the design, no testbench needed).
+    toplevel: the design module. test_module: the Python file name without .py, in cwd.
+    testcase: run only this test function. parameters: override module parameters, e.g. {"WIDTH": 6}
+    to make a slow counter finish in a few cycles. Answers with one row per test (passed, failed, with
+    the assertion message). Needs cocotb, which the user installs with `brigse install-cocotb`.
+    """
+    return _guard(lambda: core.cocotb(sources, toplevel, test_module, cwd, testcase, parameters, timeout_s))
+
+
+@mcp.tool()
 def waves(sim_id: str, signals: list[str] | None = None, start: int = 0, end: int | None = None,
           max_rows: int = 40, sample_on: str | None = None) -> dict:
     """Read the recorded signals of a simulation as text: what changed, and when.
@@ -369,6 +385,9 @@ def main() -> None:
     if sys.argv[1:2] in (["status"], ["approvals"]):
         from . import cli
         raise SystemExit(cli.run(sys.argv[1], sys.argv[2:]))
+    if sys.argv[1:2] in (["install-cocotb"], ["remove-cocotb"]):
+        from . import cocotb_env
+        raise SystemExit(cocotb_env.remove() if sys.argv[1] == "remove-cocotb" else cocotb_env.install())
     if sys.argv[1:2] == ["install-agent"]:
         from . import connect
         raise SystemExit(connect.run(sys.argv[2:]))

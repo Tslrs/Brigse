@@ -170,6 +170,62 @@ def lint(sources: list[str] | None, top: str | None, cwd: str | None, strict: bo
     return result
 
 
+def cocotb(sources: list[str], toplevel: str, test_module: str, cwd: str | None, testcase: str | None = None,
+           parameters: dict | None = None, timeout_s: int = 120) -> dict:
+    """Run a cocotb test (a Python testbench) against Verilog with Icarus Verilog.
+
+    cocotb lives in its own environment (`brigse install-cocotb`), so it works whatever Python Brigse runs on.
+    """
+    import json
+    import sys
+    import xml.etree.ElementTree as ET
+    from . import cocotb_env
+    py = cocotb_env.python()
+    if not py:
+        raise BackendError("cocotb is not installed. Ask the user to run `brigse install-cocotb` (about 40 MB); "
+                           "Brigse does not download it by itself.")
+    _need("iverilog", "brew install icarus-verilog")
+    base = Path(cwd).expanduser().resolve() if cwd else Path.cwd()
+    if not base.is_dir():
+        raise BackendError(f"Folder not found: {base}")
+    missing = [s for s in sources if not (base / s).is_file()]
+    if not sources or missing:
+        raise BackendError(f"Source files not found in {base}: {missing or 'none given'}")
+    if not (base / f"{test_module}.py").is_file():
+        raise BackendError(f"Test module not found: {base / (test_module + '.py')}. "
+                           "test_module is the file name without .py, in the same folder.")
+    with tempfile.TemporaryDirectory() as tmp:
+        args = {"sources": [str(base / s) for s in sources], "toplevel": toplevel, "module": test_module,
+                "testcase": testcase, "parameters": parameters or {}, "build_dir": str(Path(tmp) / "build"), "cwd": str(base)}
+        rc, out = _proc([str(py), str(Path(__file__).with_name("cocotb_runner.py")), json.dumps(args)], base, max(1, min(timeout_s, 900)))
+        out = re.sub(r"\x1b\[[0-9;]*m", "", out)
+        found = re.search(r"^BRIGSE_RESULTS (.+)$", out, re.M)
+        if rc is None:
+            return {"ran": False, "passed": False, "timed_out": True, "output": out[-TAIL:],
+                    "hint": "A cocotb test that waits for a signal forever never ends: give it a timeout, e.g. "
+                            "@cocotb.test(timeout_time=1, timeout_unit='ms')."}
+        if not found:
+            none = "No tests were discovered" in out
+            return {"ran": False, "passed": False, "output": out[-TAIL:],
+                    "hint": ("No tests were found: functions need the @cocotb.test() decorator." if none else
+                             "The build or the import of the test module failed; the output says where.")}
+        tests = []
+        for case in ET.parse(found.group(1)).getroot().iter("testcase"):
+            bad = case.find("failure") if case.find("failure") is not None else case.find("error")
+            status = "failed" if bad is not None else "skipped" if case.find("skipped") is not None else "passed"
+            item = {"name": case.get("name"), "status": status, "seconds": round(float(case.get("time") or 0), 3)}
+            if bad is not None:
+                item["message"] = (bad.get("message") or "")[:300]
+                item["detail"] = (bad.text or "").strip()[-1200:]
+            tests.append(item)
+    failed = [t for t in tests if t["status"] == "failed"]
+    result = {"ran": True, "passed": bool(tests) and not failed, "tests": tests, "failed": len(failed),
+              "total": len(tests), "output": out[-TAIL:]}
+    if not tests:
+        result["hint"] = "No tests were found: functions need the @cocotb.test() decorator."
+    return result
+
+
 def detect_boards(cable: str | None) -> dict:
     """List USB probes and, if a cable is named, the JTAG chain behind it."""
     ofl = _need("openFPGALoader", "brew install openfpgaloader")
