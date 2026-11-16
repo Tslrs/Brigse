@@ -25,7 +25,7 @@ from brigse import store  # noqa: E402  (decisions are made the way the dashboar
 EXPECTED_TOOLS = {
     "list_backends", "list_boards", "select_board", "dashboard_info", "request_install", "request_uninstall",
     "install_status", "activity", "backend_control", "build", "build_status", "diagnose", "chip_view",
-    "report", "simulate", "lint", "cocotb_test", "waves", "detect_boards", "program",
+    "report", "simulate", "lint", "utilization_by_module", "cocotb_test", "waves", "detect_boards", "program",
 }
 failures = []
 

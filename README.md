@@ -47,7 +47,7 @@ installed and are run by hand.
 - Testing on Linux and on more boards
 - Programming the Spartan-3A from macOS
 - Add-ons for AMD 7-series and Cyclone V
-- Parsed reports and clearer errors for larger designs: utilisation per module
+- Parsed reports and clearer errors for larger designs
 
 ## How the idea came about
 
@@ -83,6 +83,7 @@ The name is short for *Bridge to Semiconductor*, and it sounds like βρύση, 
 | `report` | Utilisation, timing (slack, and per clock its Fmax against the required frequency), failing constraints and bitstream from an output folder |
 | `lint` | Checks Verilog in about a second with Verilator (syntax, undeclared names, widths, latches), each issue with file, line and source; run before a build that takes minutes. Falls back to Icarus Verilog's parser |
 | `simulate` | Compiles and runs a Verilog testbench with Icarus Verilog and records every signal, with no change to the testbench |
+| `utilization_by_module` | Which module of a design uses how much logic, flip-flops, block RAM and multipliers, from a quick separate synthesis that keeps the hierarchy (the build flattens it); biggest first. An estimate for the Gowin architecture |
 | `cocotb_test` | Tests Verilog with a Python testbench ([cocotb](https://www.cocotb.org)) on Icarus Verilog: one row per test, with the assertion message of each failure. Needs `brigse install-cocotb` once |
 | `waves` | Reads a recording as text for an agent: what changed and when, or one row per clock edge |
 | `detect_boards` | USB probes and the JTAG chain (openFPGALoader) |

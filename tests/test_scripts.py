@@ -24,6 +24,7 @@ SCRIPTS = [
     ("test_report_ise.py", None),
     ("test_livelog.py", None),
     ("test_dashboard_security.py", None),
+    ("test_hierarchy.py", None),   # the yosys part skips itself without the gowin_oss add-on
     ("test_cocotb.py", None),     # skips itself without `brigse install-cocotb`
     ("test_waves.py", "iverilog"),
     ("test_floorplan.py", None),   # skips itself when the open-source tools are not installed

@@ -10,7 +10,7 @@ from pathlib import Path
 
 from mcp.server.fastmcp import FastMCP
 
-from . import actions, boards, core, dashboard, installer, registry, store
+from . import actions, boards, core, dashboard, hierarchy, installer, registry, store
 from .backends.base import BackendError
 
 PORT = int(os.environ.get("BRIGSE_PORT", dashboard.DEFAULT_PORT))
@@ -314,6 +314,23 @@ def simulate(sources: list[str], top: str | None = None, cwd: str | None = None,
     user sees it as a diagram in the dashboard, and you read it with the waves tool.
     """
     return _guard(lambda: actions.simulate(sources, top, cwd, timeout_s, waves, by="agent"))
+
+
+@mcp.tool()
+def utilization_by_module(cwd: str, top: str, sources: list[str] | None = None, family: str = "gw1n") -> dict:
+    """Which module of a Verilog design uses how much logic, flip-flops, block RAM and multipliers.
+
+    The build's own reports cannot tell: the tools flatten the design. This runs a quick separate
+    synthesis (yosys, a few seconds) that keeps the hierarchy and returns one row per module: what it
+    uses itself ('own'), with everything inside it ('with_submodules'), all its instances together
+    ('in_design'), and its share of the design's logic. Rows are sorted by share, biggest first, so the
+    first one is where to look when a design is too big. Parameterised modules are named 'counter (W=16)'.
+    It is an estimate for the Gowin architecture (also a fair guide for 4-input-LUT parts such as
+    Spartan-3); the real build differs by a few percent. Changes nothing. Needs the gowin_oss add-on.
+    cwd: project folder. top: top module. sources: default every .v/.sv except testbenches.
+    family: gw1n, gw2a or gw5a (decides how memories and multipliers are mapped).
+    """
+    return _guard(lambda: hierarchy.analyse(sources or [], top, cwd, family))
 
 
 @mcp.tool()
