@@ -135,6 +135,11 @@ the board, approve or reject the agent's requests, repeat a build, load a build 
 SRAM (never flash), start or stop the ISE VM, and install or uninstall the open-source tools.
 Only what Brigse downloaded can be uninstalled; vendor tools you installed are never touched.
 
+The window answers only to this computer's own names and only to its own page: a request with a foreign
+`Host` (DNS rebinding) or `Origin` (another site's page) is refused, every action needs a token that only the
+loaded page has, the page cannot be put in a frame, and a decision on an agent's request cannot be changed
+once made. `tests/test_dashboard_security.py` tries each of these attacks.
+
 The agent and the user share the same rules: one build at a time per add-on and one use of the
 programmer at a time. While anything runs, the page greys its buttons out and the server refuses
 them, and the agent's tools get a clear "already running" answer.

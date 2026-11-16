@@ -14,11 +14,13 @@ import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from urllib.parse import urlparse
 
 from . import actions, boards, installer, livelog, registry, store, vcd
 from .backends.base import BackendError
 
 DEFAULT_PORT = 8765
+MAX_BODY = 100_000      # the page sends a few bytes of JSON; anything bigger is not from the page
 WAVES_JS = Path(__file__).with_name("waves.js").read_text()
 _waves_cache: dict = {}
 TOKEN = secrets.token_urlsafe(24)
@@ -94,11 +96,19 @@ class Handler(BaseHTTPRequestHandler):
     def log_message(self, *args) -> None:   # stdout belongs to the MCP protocol: stay silent
         pass
 
+    def _security_headers(self) -> None:
+        """No framing (a hostile page could put invisible buttons over Approve), no sniffing, no referrer."""
+        self.send_header("Content-Security-Policy", "frame-ancestors 'none'")
+        self.send_header("X-Frame-Options", "DENY")
+        self.send_header("X-Content-Type-Options", "nosniff")
+        self.send_header("Referrer-Policy", "no-referrer")
+
     def _send(self, code: int, body: bytes, ctype: str) -> None:
         self.send_response(code)
         self.send_header("Content-Type", ctype)
         self.send_header("Content-Length", str(len(body)))
         self.send_header("Cache-Control", "no-store")
+        self._security_headers()
         self.end_headers()
         self.wfile.write(body)
 
@@ -106,8 +116,20 @@ class Handler(BaseHTTPRequestHandler):
         self._send(code, json.dumps(data).encode(), "application/json")
 
     def _local(self) -> bool:
-        host = (self.headers.get("Host") or "").split(":")[0]
-        return host in ("127.0.0.1", "localhost") or host.endswith(".localhost")
+        """Only this computer's own names. The Host header stops DNS rebinding (a foreign name that points
+        here); the Origin header, when the browser sends one, stops another site's page from calling us."""
+        def own(name: str | None) -> bool:
+            return name in ("127.0.0.1", "localhost") or bool(name and name.endswith(".localhost"))
+        host = (self.headers.get("Host") or "").rsplit(":", 1)[0]     # without the port
+        origin = self.headers.get("Origin")
+        if origin is not None:
+            try:
+                origin_host = urlparse(origin).hostname
+            except ValueError:
+                return False
+            if not own(origin_host):
+                return False
+        return own(host)
 
     def _stream_log(self, job_id: str) -> None:
         """Server-Sent Events: the build's log as it is written, until the build ends."""
@@ -118,6 +140,7 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Content-Type", "text/event-stream")
         self.send_header("Cache-Control", "no-store")
         self.send_header("Connection", "close")
+        self._security_headers()
         self.end_headers()
         try:
             for name, data in livelog.events(meta):
@@ -155,9 +178,15 @@ class Handler(BaseHTTPRequestHandler):
         self._json(404, {"error": "not found"})
 
     def do_POST(self) -> None:
-        if not self._local() or self.headers.get("X-Token") != TOKEN:
+        if not self._local() or not secrets.compare_digest(self.headers.get("X-Token") or "", TOKEN):
             return self._json(403, {"error": "forbidden"})
-        length = int(self.headers.get("Content-Length") or 0)
+        try:
+            length = int(self.headers.get("Content-Length") or 0)
+        except ValueError:
+            return self._json(400, {"error": "bad length"})
+        if not 0 <= length <= MAX_BODY:
+            self.close_connection = True
+            return self._json(413, {"error": "request too large"})
         try:
             body = json.loads(self.rfile.read(length) or b"{}")
         except json.JSONDecodeError:
