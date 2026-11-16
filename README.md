@@ -44,7 +44,7 @@ installed and are run by hand.
 
 ### Planned
 
-- Automated checks that run without vendor tools, on every change
+- Mock backends, so the MCP protocol itself can be tested in CI without vendor tools
 - Testing on Linux and on more boards
 - Programming the Spartan-3A from macOS
 - Add-ons for AMD 7-series and Cyclone V
@@ -232,6 +232,9 @@ place. The same goes for `vm/` and `BRIGSE_VM_HOME` (otherwise Lima's default, `
 by hand against that VM: `export LIMA_HOME=<this folder>/vm`.
 
 ## Test
+
+The checks that need no vendor tools run with `uv sync --group dev && uv run pytest` (needs `iverilog` for the
+waveform test) and on every push through GitHub Actions (Linux and macOS). The rest drive the real tools:
 
 ```bash
 uv run python tests/smoke_client.py          # protocol, simulate, report
