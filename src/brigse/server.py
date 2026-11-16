@@ -16,7 +16,7 @@ from .backends.base import BackendError
 PORT = int(os.environ.get("BRIGSE_PORT", dashboard.DEFAULT_PORT))
 
 mcp = FastMCP("brigse", instructions=(
-    "Build, inspect, simulate and program FPGA designs. Call list_backends and list_boards first. "
+    "Build, inspect, simulate and program FPGA designs. Call list_backends and list_boards first. Run lint on the sources before build. "
     "build starts a background job and returns a job_id. Some builds are long (Xilinx ISE: about "
     "25-30 minutes, plus about 90 seconds to start the VM; Gowin: seconds). Keep calling "
     "build_status with wait_seconds=50 until state is 'done' or 'failed'; every answer has a "
@@ -314,6 +314,20 @@ def simulate(sources: list[str], top: str | None = None, cwd: str | None = None,
     user sees it as a diagram in the dashboard, and you read it with the waves tool.
     """
     return _guard(lambda: actions.simulate(sources, top, cwd, timeout_s, waves, by="agent"))
+
+
+@mcp.tool()
+def lint(cwd: str, sources: list[str] | None = None, top: str | None = None, strict: bool = False) -> dict:
+    """Check Verilog/SystemVerilog in about a second. Run this before build: a build takes minutes.
+
+    Finds syntax errors, undeclared names, width mismatches and unintended latches, each with file,
+    line, a code and the source line. Uses Verilator when installed, otherwise a weaker syntax-only
+    check (the answer says which). Reads only; writes nothing.
+    cwd: the project folder. sources: files relative to it (default: every .v/.sv/.vh in it).
+    top: top module, to ignore modules nothing uses. strict: also report style warnings (unused signals).
+    Fix every error, and read the warnings, before you start the build.
+    """
+    return _guard(lambda: core.lint(sources, top, cwd, strict))
 
 
 @mcp.tool()

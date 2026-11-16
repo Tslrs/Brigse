@@ -97,6 +97,78 @@ def simulate(sources: list[str], top: str | None, cwd: str | None, timeout_s: in
         result["waves_note"] = note
     return result
 
+VERILOG_EXT = {".v", ".sv", ".vh", ".svh"}
+SYNTAX_HINT = ("A syntax error is often reported on the line after the real mistake: look at the end of the "
+               "previous line (a missing ';', ')' or 'end').")
+
+
+def _issue(severity, code, file, line, col, message, base):
+    issue = {"severity": severity, "code": code, "file": file, "line": line, "column": col,
+             "message": " ".join(message.split())}
+    try:
+        issue["source"] = (base / file).read_text(errors="replace").splitlines()[line - 1].strip()[:200]
+    except (OSError, IndexError):
+        pass
+    return issue
+
+
+def lint(sources: list[str] | None, top: str | None, cwd: str | None, strict: bool = False,
+         timeout_s: int = 30) -> dict:
+    """Check Verilog/SystemVerilog in about a second, before a build that takes minutes.
+
+    Uses Verilator when it is installed (--lint-only), otherwise Icarus Verilog's parser, which finds
+    syntax and undeclared-name errors but not width mistakes. Nothing is written to the project.
+    """
+    base = Path(cwd).expanduser().resolve() if cwd else Path.cwd()
+    if not base.is_dir():
+        raise BackendError(f"Folder not found: {base}")
+    files = sources or sorted(p.name for p in base.iterdir() if p.is_file() and p.suffix.lower() in VERILOG_EXT)
+    missing = [f for f in files if not (base / f).is_file()]
+    if not files or missing:
+        raise BackendError(f"Source files not found in {base}: {missing or 'none given'}")
+
+    verilator = shutil.which("verilator")
+    issues: list[dict] = []
+    if verilator:
+        args = [verilator, "--lint-only", "--timing", "-Wno-fatal"] + (["-Wall"] if strict else [])
+        args += (["--top-module", top] if top else []) + files
+        rc, out = _proc(args, base, max(1, min(timeout_s, 300)))
+        pat = re.compile(r"^%(Error|Warning)(?:-(\w+))?: ([^:\s]+):(\d+):(\d+): (.*)$")
+        for line in out.splitlines():
+            m = pat.match(line)
+            if m:
+                sev, code, f, ln, col, msg = m.groups()
+                issues.append(_issue("error" if sev == "Error" else "warning", code or "ERROR", f, int(ln), int(col), msg, base))
+        if rc is None:
+            raise BackendError(f"The linter did not finish in {timeout_s} s.")
+        tool = "verilator"
+        if rc != 0 and not any(i["severity"] == "error" for i in issues):
+            issues.append({"severity": "error", "code": "ERROR", "message": out.strip()[-500:]})
+    else:
+        iverilog = _need("iverilog", "brew install verilator  (or icarus-verilog)")
+        args = [iverilog, "-g2012", "-t", "null"] + (["-s", top] if top else []) + (["-Wall"] if strict else []) + files
+        rc, out = _proc(args, base, max(1, min(timeout_s, 300)))
+        if rc is None:
+            raise BackendError(f"The linter did not finish in {timeout_s} s.")
+        pat = re.compile(r"^([^:\s]+):(\d+): (?:(error|warning): )?(.*)$")
+        for line in out.splitlines():
+            m = pat.match(line)
+            if m:
+                f, ln, sev, msg = m.groups()
+                issues.append(_issue("warning" if sev == "warning" else "error", "IVERILOG", f, int(ln), None, msg, base))
+        tool = "iverilog"
+    errors = sum(i["severity"] == "error" for i in issues)
+    result = {"tool": tool, "ok": errors == 0, "errors": errors, "warnings": len(issues) - errors, "issues": issues[:60]}
+    if len(issues) > 60:
+        result["truncated"] = len(issues) - 60
+    if any("syntax" in i["message"].lower() for i in issues):
+        result["hint"] = SYNTAX_HINT
+    if tool == "iverilog":
+        result["note"] = "Verilator is not installed, so width and latch mistakes are not checked. brew install verilator"
+    elif not strict:
+        result["note"] = "Default checks only; pass strict=true for style warnings (unused signals and the like)."
+    return result
+
 
 def detect_boards(cable: str | None) -> dict:
     """List USB probes and, if a cable is named, the JTAG chain behind it."""

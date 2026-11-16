@@ -47,7 +47,7 @@ installed and are run by hand.
 - Testing on Linux and on more boards
 - Programming the Spartan-3A from macOS
 - Add-ons for AMD 7-series and Cyclone V
-- Parsed reports and clearer errors for larger designs
+- Parsed reports and clearer errors for larger designs: Fmax per clock for ISE builds (Gowin already has it) and utilisation per module
 
 ## How the idea came about
 
@@ -81,6 +81,7 @@ The name is short for *Bridge to Semiconductor*, and it sounds like βρύση, 
 | `diagnose` | Explains a failed build in plain words (where, why, how to fix) and catches mistakes the tools let through |
 | `chip_view` | Draws where a Gowin design sits on the chip, from its bitstream (Gowin EDA builds too), as SVG and a PNG for slides |
 | `report` | Utilisation, timing, failing constraints and bitstream from an output folder |
+| `lint` | Checks Verilog in about a second with Verilator (syntax, undeclared names, widths, latches), each issue with file, line and source; run before a build that takes minutes. Falls back to Icarus Verilog's parser |
 | `simulate` | Compiles and runs a Verilog testbench with Icarus Verilog and records every signal, with no change to the testbench |
 | `waves` | Reads a recording as text for an agent: what changed and when, or one row per clock edge |
 | `detect_boards` | USB probes and the JTAG chain (openFPGALoader) |
@@ -137,7 +138,7 @@ them, and the agent's tools get a clear "already running" answer.
 ## Install
 
 ```bash
-brew install uv icarus-verilog openfpgaloader
+brew install uv icarus-verilog openfpgaloader verilator   # verilator is optional: it makes `lint` stronger
 git clone https://github.com/Tslrs/Brigse.git ~/brigse && cd ~/brigse && uv sync
 ```
 
