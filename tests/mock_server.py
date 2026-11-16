@@ -42,7 +42,20 @@ class MockBackend(Backend):
         raise BackendError("The mock add-on has no report.")
 
 
-registry.BACKENDS.insert(0, MockBackend())
+class MockAddon(Backend):
+    """An add-on that is not installed and can be installed after approval, with a plan that needs no network."""
+    name = "mock_addon"
+    title = "Mock installable add-on (tests)"
+    part_patterns = (r"addon",)
+
+    def status(self) -> dict:
+        return {"installed": False, "ready": False, "usable": False, "detail": "fake, not installed"}
+
+    def install_plan(self) -> dict:
+        return {"what": self.title, "source": "nowhere", "disk": "1 MB", "licence": "MIT", "automatic": True}
+
+
+registry.BACKENDS[0:0] = [MockBackend(), MockAddon()]
 
 if __name__ == "__main__":
     server.main()

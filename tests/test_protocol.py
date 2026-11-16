@@ -104,9 +104,9 @@ async def main():
         check("a missing folder is an error", "not found" in (await call(s, "build", project_dir=str(PROJECT / "no"), top="x", part="fake-1")).get("error", ""))
 
         # approvals: only the user decides
-        req = await call(s, "request_install", backend="gowin_oss", reason="test")
+        req = await call(s, "request_install", backend="mock_addon", reason="test")
         check("an install request waits for the user", req["state"] == "pending" and req["plan"]["automatic"] is True)
-        again = await call(s, "request_install", backend="gowin_oss")
+        again = await call(s, "request_install", backend="mock_addon")
         check("asking twice does not create a second request", again["request_id"] == req["request_id"])
         check("install_status says it is still waiting", "Still waiting" in (await call(s, "install_status", request_id=req["request_id"]))["note"])
         store.decide_request(req["request_id"], approve=False)
