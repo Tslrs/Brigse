@@ -13,7 +13,7 @@ A modular [MCP](https://modelcontextprotocol.io) server that lets an AI agent bu
 simulate and program FPGA designs through one set of tools. Each FPGA family is an add-on behind
 a common interface, so the agent calls `build` the same way for every board.
 
-> **Early stage (v0.1).** Brigse works on its author's machine, an Apple Silicon Mac on macOS 27, and
+> **Early stage (v0.2).** Brigse works on its author's machine, an Apple Silicon Mac on macOS 27, and
 > has gone from Verilog to a running board on one board so far. It has not been tried on other
 > machines or operating systems. Expect rough edges and breaking changes. Systematic testing is
 > planned and listed below; until then, treat it as a working prototype.
@@ -36,11 +36,14 @@ the user can approve it there. Vendor tools and licences are never downloaded by
 | Error explainer | 18 real failures from the three toolchains, plus 2 good builds that must stay quiet (`tests/test_diagnose.py`, no vendor tools needed) | Errors outside this list are reported unexplained |
 | Chip view from a bitstream | Against a known placement: 408 of 408 logic tiles and 4 of 4 block RAM, no false ones; empty designs show nothing; on a real Gowin EDA build the block RAM count (19 of 26) equals the IDE's own report | Multipliers, input pins, other chips |
 | Waveforms and chip view | Recording, text view, dashboard endpoint (`tests/test_waves.py`); chip view against a real placement (`tests/test_floorplan.py`); both also looked at in a browser | Large recordings (capped at 60 000 changes), other Gowin chips for the chip view (only the 9K was checked) |
-| Dashboard and approvals | Board choice, approve/reject, buttons refused while something runs | Browsers other than the one used in development |
-| Platforms | macOS 27 on Apple Silicon | Linux, Windows, Intel Macs |
+| Dashboard and approvals | Board choice, approve/reject, buttons refused while something runs; an attack test (foreign Host and Origin, wrong tokens, huge requests, framing); the live log in a real browser | Browsers other than Chrome |
+| Lint, cocotb, utilisation per module | `lint` with Verilator and with the Icarus fallback; `cocotb_test` against a failing and a passing design; per-module utilisation against yosys' own totals (`tests/test_lint.py`, `test_cocotb.py`, `test_hierarchy.py`) | VHDL; utilisation numbers are an estimate for the Gowin architecture, not a real build's |
+| Timing per clock (ISE) | Fmax and required frequency per clock, equal to the tool's own figures on the Next186 timing report (`tests/test_report_ise.py`) | Parts other than Spartan-3 |
+| MCP protocol | Every tool listed; builds that pass and fail, one build at a time, errors, approvals, against a fake add-on (`tests/test_protocol.py`) | `program` and `chip_view` over MCP |
+| Platforms | macOS 27 on Apple Silicon; the checks that need no vendor tools also run on GitHub Actions (Ubuntu and macOS) and on Debian 12 | Windows, Intel Macs, any vendor tool on Linux |
 
-The scripts in `tests/` drive the server over MCP the way an agent would; they need the real tools
-installed and are run by hand.
+The checks that need no vendor tools run on every push (see Test below). The scripts that drive the real
+tools (`smoke_client.py`, `gowin_client.py` and the other `*_client.py`) need them installed and are run by hand.
 
 ### Planned
 

@@ -16,7 +16,7 @@ HOME = tempfile.mkdtemp()
 os.environ["BRIGSE_HOME"] = HOME
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import mock_server  # noqa: E402,F401  (registers the fake add-on)
-from brigse import actions, dashboard, livelog, store  # noqa: E402
+from brigse import actions, dashboard, livelog  # noqa: E402
 from brigse.backends import localjob  # noqa: E402
 
 failures = []

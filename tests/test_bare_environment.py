@@ -5,7 +5,6 @@ usage: uv run python tests/test_bare_environment.py
 import os
 import shutil
 import subprocess
-import sys
 
 uv = shutil.which("uv")
 code = ("import shutil, brigse; "

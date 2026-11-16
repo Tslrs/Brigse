@@ -8,7 +8,6 @@ signals and parameters are skipped.
 """
 from __future__ import annotations
 
-import re
 from pathlib import Path
 
 MAX_CHANGES_PER_SIGNAL = 4000
@@ -48,7 +47,7 @@ def parse(path: Path) -> Vcd:
                     body.append(t)
                 vcd.timescale = "".join(body)
             elif tok == "$scope":
-                kind, name = next(tokens), next(tokens)
+                _scope_kind, name = next(tokens), next(tokens)
                 scope.append(name)
                 next(tokens)
             elif tok == "$upscope":

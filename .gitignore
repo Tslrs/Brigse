@@ -13,7 +13,6 @@ build_out/
 .venv/
 __pycache__/
 *.egg-info/
-uv.lock
 .DS_Store
 
 # Test fixtures are real tool output on purpose

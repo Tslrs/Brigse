@@ -177,7 +177,6 @@ def cocotb(sources: list[str], toplevel: str, test_module: str, cwd: str | None,
     cocotb lives in its own environment (`brigse install-cocotb`), so it works whatever Python Brigse runs on.
     """
     import json
-    import sys
     import xml.etree.ElementTree as ET
     from . import cocotb_env
     py = cocotb_env.python()

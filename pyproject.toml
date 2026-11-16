@@ -1,6 +1,6 @@
 [project]
 name = "brigse"
-version = "0.1.0"
+version = "0.2.0"
 description = "Modular MCP server for FPGA build, report, simulation and programming"
 readme = "README.md"
 license = "MIT"
@@ -15,7 +15,10 @@ png = ["pillow>=10"]
 brigse = "brigse.server:main"
 
 [dependency-groups]
-dev = ["pytest>=8"]
+dev = [
+    "pytest>=8",
+    "ruff>=0.17.5",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -27,3 +30,11 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/brigse"]
+
+[tool.ruff.lint]
+# real mistakes only: syntax errors, undefined or unused names, bad comparisons. No style rules.
+select = ["E4", "E7", "E9", "F"]
+ignore = ["E741"]                      # one-letter names such as `l` for a line are fine here
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["E402"]                   # tests set BRIGSE_HOME before importing brigse, on purpose

@@ -8,7 +8,6 @@ import pty
 import subprocess
 import sys
 import tempfile
-from pathlib import Path
 
 home = tempfile.mkdtemp()
 env = {**os.environ, "BRIGSE_HOME": home, "BRIGSE_DASHBOARD": "0"}
