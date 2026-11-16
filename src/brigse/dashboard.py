@@ -15,7 +15,7 @@ import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
-from . import actions, boards, installer, registry, store, vcd
+from . import actions, boards, installer, livelog, registry, store, vcd
 from .backends.base import BackendError
 
 DEFAULT_PORT = 8765
@@ -109,6 +109,23 @@ class Handler(BaseHTTPRequestHandler):
         host = (self.headers.get("Host") or "").split(":")[0]
         return host in ("127.0.0.1", "localhost") or host.endswith(".localhost")
 
+    def _stream_log(self, job_id: str) -> None:
+        """Server-Sent Events: the build's log as it is written, until the build ends."""
+        meta = store.get_job(job_id)
+        if not meta:
+            return self._json(404, {"error": "unknown build"})
+        self.send_response(200)
+        self.send_header("Content-Type", "text/event-stream")
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("Connection", "close")
+        self.end_headers()
+        try:
+            for name, data in livelog.events(meta):
+                self.wfile.write(f"event: {name}\ndata: {json.dumps(data)}\n\n".encode())
+                self.wfile.flush()
+        except (BrokenPipeError, ConnectionResetError):
+            pass                                         # the page was closed
+
     def do_GET(self) -> None:
         if not self._local():
             return self._json(403, {"error": "local access only"})
@@ -127,6 +144,8 @@ class Handler(BaseHTTPRequestHandler):
                 _waves_cache.clear()
                 _waves_cache[key] = vcd.to_json(vcd.parse(path))
             return self._json(200, _waves_cache[key])
+        if len(parts) == 4 and parts[:2] == ["api", "jobs"] and parts[3] == "log":
+            return self._stream_log(parts[2])
         if len(parts) == 4 and parts[:2] == ["api", "jobs"] and parts[3] == "floorplan.svg":
             job = store.get_job(parts[2])
             svgs = sorted(Path(job["job_dir"]).glob("*.floorplan.svg")) if job else []
@@ -282,7 +301,10 @@ section[role=tabpanel][hidden]{display:none}
 <div id="statusbox"></div><div id="err" class="small"></div>
 <div id="approvals"></div>
 <nav id="tabs" role="tablist" aria-label="Sections"></nav>
-<section id="p-builds" role="tabpanel"><div id="jobs"></div></section>
+<section id="p-builds" role="tabpanel">
+<div id="live" class="card" hidden><div class="row"><b>Live log</b><span class="mute small grow" id="livestep"></span></div>
+<pre id="livelog" aria-live="off" style="max-height:260px;overflow:auto"></pre></div>
+<div id="jobs"></div></section>
 <section id="p-sims" role="tabpanel"><div id="sims"></div></section>
 <section id="p-board" role="tabpanel"><div id="boards"></div></section>
 <section id="p-addons" role="tabpanel"><div id="backends"></div></section>
@@ -419,9 +441,23 @@ function tabsView(d){
   for(const [id] of TABS)document.getElementById("p-"+id).hidden=id!==tab;
   if(key===lastTabs)return;lastTabs=key;
   document.getElementById("tabs").innerHTML=TABS.map(([id,l])=>`<button role="tab" aria-selected="${id===tab}" onclick="pick('${id}')">${l}${n[id]?`<span class="n">${n[id]}</span>`:""}</button>`).join("");}
+let es=null,esJob=null;
+function liveView(d){
+  const run=(d.jobs||[]).find(j=>j.state==="running");
+  if(!run||esJob===run.job_id||!window.EventSource)return;
+  if(es)es.close();
+  esJob=run.job_id;const box=document.getElementById("live"),pre=document.getElementById("livelog"),stepEl=document.getElementById("livestep");
+  box.hidden=false;pre.textContent="";stepEl.textContent=run.project;
+  es=new EventSource("/api/jobs/"+encodeURIComponent(run.job_id)+"/log");
+  es.addEventListener("log",e=>{const m=JSON.parse(e.data),atEnd=pre.scrollTop+pre.clientHeight>=pre.scrollHeight-8;
+    if(m.replace)pre.textContent="";pre.textContent+=m.text;if(pre.textContent.length>200000)pre.textContent=pre.textContent.slice(-150000);
+    if(atEnd)pre.scrollTop=pre.scrollHeight;});
+  es.addEventListener("state",e=>{const m=JSON.parse(e.data);stepEl.textContent=run.project+(m.current_step?" - "+m.current_step:"");});
+  es.addEventListener("end",e=>{es.close();es=null;stepEl.textContent=run.project+" - "+JSON.parse(e.data).state;});
+  es.onerror=()=>{if(es){es.close();es=null;esJob=null;}};}
 async function tick(){
   try{const d=await (await fetch("/api/state")).json();window.__d=d;
-    statusView(d);approvals(d);boardsView(d);jobsView(d);simsView(d);backendsView(d);tabsView(d);
+    statusView(d);approvals(d);boardsView(d);jobsView(d);liveView(d);simsView(d);backendsView(d);tabsView(d);
     if(errAt&&Date.now()-errAt>12000)fail("");
   }catch(e){put("statusbox",'<div id="status" class="busy"><span class="dot"></span><div>The Brigse server is not reachable.</div></div>');}}
 tick();setInterval(tick,3000);

@@ -22,6 +22,7 @@ SCRIPTS = [
     ("test_protocol.py", None),
     ("test_lint.py", None),
     ("test_report_ise.py", None),
+    ("test_livelog.py", None),
     ("test_waves.py", "iverilog"),
     ("test_floorplan.py", None),   # skips itself when the open-source tools are not installed
 ]

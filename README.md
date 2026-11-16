@@ -108,6 +108,9 @@ constraint is traced to its slowest path (ISE).
 - **Waveforms.** `simulate` records every signal. The dashboard draws them (zoom, drag, a cursor that
   shows each value, hex/binary/decimal); the `waves` tool gives an agent the same data as text, for
   example one row per rising clock edge.
+- **Live log.** While a build runs, the Builds tab shows its log as it is written (Server-Sent Events,
+  no polling): every step of the open-source Gowin flow and Gowin EDA, line by line. The ISE virtual machine
+  keeps its logs inside the VM, so there the last lines of the current step are shown as they change.
 - **Chip view.** For builds made with the open-source Gowin flow, the dashboard draws the chip as a grid
   of tiles and colours the ones that hold your design: logic, pins, block RAM, multipliers. It is drawn
   from the placement nextpnr wrote and the chip database that ships with the tools. Gowin EDA's own
