@@ -7,3 +7,5 @@ to `/home/user/project`.
 
 To keep them small: the Gowin logs keep only their ERROR/WARN lines, the yosys netlists keep only the
 port list of the top module (all the checks read), and bitstreams are placeholders.
+
+`ise_timing_multiclock` is the timing report of the Next186 build (six clocks, two of them failing), cut down to the heads of the per-clock blocks and the derived-constraint table.

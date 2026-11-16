@@ -347,6 +347,41 @@ class IseSpartan3Backend(Backend):
                     (out_dir / m.name).write_bytes(tar.extractfile(m).read())
 
     # ---- report -----------------------------------------------------------
+    @staticmethod
+    def _clocks(twr: str) -> list[dict]:
+        """One row per PERIOD constraint of the timing report: the clock's real speed limit (Fmax).
+
+        Fmax is 1000 / minimum period. The requirement comes from the 'Derived Constraint Report'
+        table when the clock is derived (a DCM output), otherwise from the constraint line itself.
+        A clock with no paths analysed has only a pulse-width limit, which the row says.
+        """
+        required = {m.group(1): float(m.group(2)) for m in re.finditer(
+            r"^\|\s*(TS_\w+)\s*\|\s*([\d.]+)ns\|", twr, re.M)}
+        rows = []
+        for block in re.split(r"^Timing constraint: ", twr, flags=re.M)[1:]:
+            head = block.split("For more information", 1)[0]
+            m = re.match(r"(TS_\w+)\s*=\s*PERIOD\b", head)
+            period = re.search(r"Minimum period is\s+([\d.]+)ns", block)
+            if not (m and period):
+                continue
+            name, minimum = m.group(1), float(period.group(1))
+            req = required.get(name)
+            if req is None:
+                r = re.search(r'PERIOD\s+TIMEGRP\s+"[^"]+"\s+([\d.]+)\s*ns', head)
+                req = float(r.group(1)) if r else None
+            paths = re.search(r"(\d+) paths analyzed", block)
+            errors = re.search(r"(\d+) timing errors detected", block)
+            row = {"constraint": name, "required_ns": req,
+                   "required_mhz": round(1000 / req, 3) if req else None,
+                   "min_period_ns": minimum, "fmax_mhz": round(1000 / minimum, 3),
+                   "paths_analyzed": int(paths.group(1)) if paths else None,
+                   "timing_errors": int(errors.group(1)) if errors else None}
+            row["met"] = row["timing_errors"] == 0 and (req is None or minimum <= req)
+            if row["paths_analyzed"] == 0:
+                row["note"] = "no register-to-register paths on this clock; the limit is the clock pin's pulse width"
+            rows.append(row)
+        return rows
+
     def report(self, out_dir: Path) -> dict:
         out_dir = out_dir.expanduser()
         if not out_dir.is_dir():
@@ -399,8 +434,14 @@ class IseSpartan3Backend(Backend):
             timing["worst_slack_ns"] = min((r["slack_ns"] for r in rows), default=None)
             rep["timing"] = timing
 
+        twr = read("*.twr")
+        if twr:
+            clocks = self._clocks(twr)
+            if clocks:
+                rep.setdefault("timing", {})["clocks"] = clocks
+
         bits = sorted(out_dir.glob("*.bit"))
         rep["bitstream"] = {"path": str(bits[0]), "bytes": bits[0].stat().st_size} if bits else None
-        if not (syr or mrp or par or bits):
+        if not (syr or mrp or par or twr or bits):
             raise BackendError(f"No ISE reports found in {out_dir}")
         return rep

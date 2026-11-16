@@ -1,0 +1,101 @@
+================================================================================
+Timing constraint: TS_CLK_50MHZ = PERIOD TIMEGRP "CLK_50MHZ" 55 ns HIGH 50%;
+For more information, see Period Analysis in the Timing Closure User Guide (UG612).
+
+ 0 paths analyzed, 0 endpoints analyzed, 0 failing endpoints
+ 0 timing errors detected. (0 component switching limit errors)
+ Minimum period is  20.000ns.
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+
+================================================================================
+Timing constraint: TS_sys_clk_in = PERIOD TIMEGRP "sys_clk_in" 9 ns HIGH 50%;
+For more information, see Period Analysis in the Timing Closure User Guide (UG612).
+
+ 0 paths analyzed, 0 endpoints analyzed, 0 failing endpoints
+ 0 timing errors detected. (0 component switching limit errors)
+ Minimum period is   4.800ns.
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+
+================================================================================
+Timing constraint: TS_dcm50_cpu_CLKFX_BUF = PERIOD TIMEGRP 
+"dcm50_cpu_CLKFX_BUF" TS_CLK_50MHZ /         1.33333333 HIGH 50%;
+For more information, see Period Analysis in the Timing Closure User Guide (UG612).
+
+ 5907226426746 paths analyzed, 4393 endpoints analyzed, 0 failing endpoints
+ 0 timing errors detected. (0 setup errors, 0 hold errors, 0 component switching limit errors)
+ Minimum period is  41.157ns.
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+
+================================================================================
+Timing constraint: TS_dcm133_25_CLK0_BUF = PERIOD TIMEGRP "dcm133_25_CLK0_BUF" 
+TS_sys_clk_in HIGH         50%;
+For more information, see Period Analysis in the Timing Closure User Guide (UG612).
+
+ 43253 paths analyzed, 1042 endpoints analyzed, 24 failing endpoints
+ 24 timing errors detected. (24 setup errors, 0 hold errors, 0 component switching limit errors)
+ Minimum period is  10.307ns.
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+
+================================================================================
+Timing constraint: TS_dcm133_25_CLK90_BUF = PERIOD TIMEGRP 
+"dcm133_25_CLK90_BUF" TS_sys_clk_in         PHASE 2.25 ns HIGH 50%;
+For more information, see Period Analysis in the Timing Closure User Guide (UG612).
+
+ 1053 paths analyzed, 618 endpoints analyzed, 0 failing endpoints
+ 0 timing errors detected. (0 setup errors, 0 hold errors, 0 component switching limit errors)
+ Minimum period is   8.892ns.
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+
+================================================================================
+Timing constraint: TS_dcm133_25_CLKFX_BUF = PERIOD TIMEGRP 
+"dcm133_25_CLKFX_BUF" TS_sys_clk_in /         0.1875 HIGH 50%;
+For more information, see Period Analysis in the Timing Closure User Guide (UG612).
+
+ 2480 paths analyzed, 496 endpoints analyzed, 11 failing endpoints
+ 11 timing errors detected. (11 setup errors, 0 hold errors, 0 component switching limit errors)
+ Minimum period is 112.384ns.
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+
+  Location pin: SLICE_X14Y92.SR
+  Clock network: ddr_vga_fifo/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/rstblk/rd_rst_reg<1>
+--------------------------------------------------------------------------------
+
+
+Derived Constraint Report
+Derived Constraints for TS_CLK_50MHZ
++-------------------------------+-------------+-------------+-------------+-------------+-------------+-------------+-------------+
+|                               |   Period    |       Actual Period       |      Timing Errors        |      Paths Analyzed       |
+|           Constraint          | Requirement |-------------+-------------|-------------+-------------|-------------+-------------|
+|                               |             |   Direct    | Derivative  |   Direct    | Derivative  |   Direct    | Derivative  |
++-------------------------------+-------------+-------------+-------------+-------------+-------------+-------------+-------------+
+|TS_CLK_50MHZ                   |     55.000ns|     20.000ns|     54.876ns|            0|            0|            0|5907226426746|
+| TS_dcm50_cpu_CLKFX_BUF        |     41.250ns|     41.157ns|          N/A|            0|            0|5907226426746|            0|
++-------------------------------+-------------+-------------+-------------+-------------+-------------+-------------+-------------+
+
+Derived Constraints for TS_sys_clk_in
++-------------------------------+-------------+-------------+-------------+-------------+-------------+-------------+-------------+
+|                               |   Period    |       Actual Period       |      Timing Errors        |      Paths Analyzed       |
+|           Constraint          | Requirement |-------------+-------------|-------------+-------------|-------------+-------------|
+|                               |             |   Direct    | Derivative  |   Direct    | Derivative  |   Direct    | Derivative  |
++-------------------------------+-------------+-------------+-------------+-------------+-------------+-------------+-------------+
+|TS_sys_clk_in                  |      9.000ns|      4.800ns|     21.072ns|            0|           35|            0|        46786|
+| TS_dcm133_25_CLK0_BUF         |      9.000ns|     10.307ns|          N/A|           24|            0|        43253|            0|
+| TS_dcm133_25_CLK90_BUF        |      9.000ns|      8.892ns|          N/A|            0|            0|         1053|            0|
+| TS_dcm133_25_CLKFX_BUF        |     48.000ns|    112.384ns|          N/A|           11|            0|         2480|            0|
++-------------------------------+-------------+-------------+-------------+-------------+-------------+-------------+-------------+
+
+2 constraints not met.
+
+
