@@ -1,0 +1,31 @@
+# Προτάσεις Αναβάθμισης για το Brigse
+
+## 1. Ταχύτητα & Agent UX (Developer / Agent Experience)
+- Γρήγορο Linting (verilator --lint-only):
+  * Σήμερα ένα build μπορεί να πάρει από 1 έως αρκετά λεπτά, μόνο και μόνο για να αποτύχει από ένα συντακτικό λάθος ή λάθος wire width.
+  * Με ένα ξεχωριστό MCP tool "lint", ο έλεγχος γίνεται σε 1 δευτερόλεπτο, επιτρέποντας στο AI να διορθώνει λάθη ακαριαία πριν ξεκινήσει το βαρύ synthesis.
+- Structured Timing & Resource Report:
+  * Μετατροπή των raw log αρχείων σε δομημένο JSON format.
+  * Άμεση εξαγωγή Fmax, Worst Negative Slack (WNS) και ποσοστών χρήσης πόρων (LUTs, Flip-Flops, BRAM, DSPs) ανά module.
+
+## 2. Simulation & Verification (Προσομοίωση & Έλεγχος)
+- Υποστήριξη Cocotb (Python Testbenches):
+  * Αντί για δύσχρηστα Verilog testbenches, τα τεστ γράφονται σε Python.
+  * Το AI μπορεί να γράφει assertions, να στέλνει test vectors και να ελέγχει το κύκλωμα με native Python tests.
+- Υποστήριξη SystemVerilog & VHDL:
+  * Ενσωμάτωση του ghdl-yosys-plugin για υποστήριξη VHDL.
+  * Χρήση σύγχρονων parsers (Slang / Surelog) για πλήρη υποστήριξη SystemVerilog.
+
+## 3. Interactive Debugging στο Hardware (On-Chip Debugging)
+- Soft Logic Analyzer / UART Sniffer:
+  * Εισαγωγή ενός ελαφριού module καταγραφής (ILA core / UART probe) μέσα στον κώδικα Verilog.
+  * Δυνατότητα στο AI να διαβάζει σε πραγματικό χρόνο τις τιμές εσωτερικών σημάτων και καταχωρητών από το FPGA ενώ αυτό τρέχει.
+
+## 4. Αναβάθμιση Dashboard (Web UI)
+- Ενσωματωμένος Waveform Viewer:
+  * Οπτική απεικόνιση των κυματομορφών (waveforms) απευθείας στο web UI (π.χ. με Surfer Wasm ή WaveDrom) αντί μόνο για ανάγνωση raw VCD κειμένου.
+- Live Streaming Logs (WebSockets / Server-Sent Events):
+  * Ζωντανή ροή των μηνυμάτων του compiler στο UI σε πραγματικό χρόνο, αντικαθιστώντας το polling.
+
+---
+Σημείωση: Οι προτάσεις για νέα hardware backends / πρόσθετα πακέτα (add-ons) παραλείφθηκαν όπως ζητήθηκε.
