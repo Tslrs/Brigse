@@ -39,7 +39,7 @@ the user can approve it there. Vendor tools and licences are never downloaded by
 | Dashboard and approvals | Board choice, approve/reject, buttons refused while something runs; an attack test (foreign Host and Origin, wrong tokens, huge requests, framing); the live log in a real browser | Browsers other than Chrome |
 | Lint, cocotb, utilisation per module | `lint` with Verilator and with the Icarus fallback; `cocotb_test` against a failing and a passing design; per-module utilisation against yosys' own totals (`tests/test_lint.py`, `test_cocotb.py`, `test_hierarchy.py`) | VHDL; utilisation numbers are an estimate for the Gowin architecture, not a real build's |
 | Timing per clock (ISE) | Fmax and required frequency per clock, equal to the tool's own figures on the Next186 timing report (`tests/test_report_ise.py`) | Parts other than Spartan-3 |
-| MCP protocol | Every tool listed; builds that pass and fail, one build at a time, errors, approvals, against a fake add-on (`tests/test_protocol.py`) | `program` and `chip_view` over MCP |
+| MCP protocol | Every tool listed; builds that pass and fail, one build at a time, errors, approvals, against a fake add-on (`tests/test_protocol.py`); `program` and `detect_boards` against a fake loader: dry run, SRAM or flash, refused devices, failures, one use at a time (`tests/test_program.py`) | `program` against a real board; `chip_view` over MCP with the real tools |
 | Platforms | macOS 27 on Apple Silicon; the checks that need no vendor tools also run on GitHub Actions (Ubuntu and macOS) and on Debian 12 | Windows, Intel Macs, any vendor tool on Linux |
 
 The checks that need no vendor tools run on every push (see Test below). The scripts that drive the real

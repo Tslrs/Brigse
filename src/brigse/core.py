@@ -235,11 +235,29 @@ def detect_boards(cable: str | None) -> dict:
     return result
 
 
+def _model_names(model: str) -> set[str]:
+    """Names a loader model can go by: 'GW2A(R)-18(C)' is also gw2a-18, gw2ar-18, gw2a-18c and gw2ar-18c."""
+    names = {""}
+    for part in re.split(r"(\([^)]*\))", model.lower()):
+        if part.startswith("("):
+            names = names | {n + part[1:-1] for n in names}      # with or without the optional letters
+        else:
+            names = {n + part for n in names}
+    return names
+
+
+def _part_name(part: str) -> str:
+    """What to look for in the loader's table: Gowin parts are 'gw1nr-lv9qn88pc6/i5' (family gw1nr, size 9), so
+    'gw1nr-9'; other vendors use the device before the first dash (xc3s700a)."""
+    m = re.match(r"(gw\w+?)-lv(\d+)", part.lower())
+    return f"{m.group(1)}-{m.group(2)}" if m else part.split("-")[0].lower()
+
+
 def _loader_knows(ofl: str, part: str) -> bool:
     _, table = _proc([ofl, "--list-fpga"], None, 30)
-    device = part.split("-")[0].lower()
-    return any(device == cols[3].lower() for cols in
-               (line.split() for line in table.splitlines()) if len(cols) >= 4)
+    wanted = _part_name(part)
+    return any(wanted in _model_names(cols[3]) for cols in (line.split() for line in table.splitlines())
+               if len(cols) >= 4)
 
 
 def program(bitstream: str, cable: str | None, board: str | None, part: str | None,

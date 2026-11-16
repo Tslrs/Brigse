@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+Fixed
+- `program` with a `part` refused every Gowin part (Tang Nano 9K and 20K included): the loader lists `GW1NR-9`, the check looked for `gw1nr`. Found by the new `tests/test_program.py`. Spartan-3A parts are still refused, as documented.
+
 ## 0.2.0
 
 New tools
