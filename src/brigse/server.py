@@ -352,6 +352,9 @@ def program(bitstream: str, cable: str | None = None, board: str | None = None,
 
 
 def main() -> None:
+    if sys.argv[1:2] in (["status"], ["approvals"]):
+        from . import cli
+        raise SystemExit(cli.run(sys.argv[1], sys.argv[2:]))
     if sys.argv[1:2] == ["install-agent"]:
         from . import connect
         raise SystemExit(connect.run(sys.argv[2:]))

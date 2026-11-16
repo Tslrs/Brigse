@@ -154,6 +154,20 @@ Then restart the app. Builds can be long (an ISE build takes about 25-30 minutes
 `build` and `build_status` answer carries a `next` field that tells the agent what to do: ask
 again in 50 seconds, or, when it is finished, read the report and the diagnosis before saying it worked.
 
+### In the terminal
+
+No browser needed. These work in any terminal (Ghostty, iTerm, over ssh):
+
+```bash
+uv run brigse status            # board, builds with time and timing, simulations, add-ons, pending requests
+uv run brigse status --watch    # the same, refreshing every 3 seconds
+uv run brigse approvals         # answer the agent's requests: approve, reject or skip
+uv run brigse dashboard         # open the full window in the browser
+```
+
+`approvals` only works in a real terminal and needs the whole word typed. When it is run from
+a script or an agent's pipe, it refuses and leaves the request pending.
+
 ## Add-ons
 
 | Add-on | Parts | Toolchain | State |
