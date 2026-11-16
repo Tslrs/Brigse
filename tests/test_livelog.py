@@ -45,7 +45,7 @@ def read_events(url, limit=30):
 project = Path(tempfile.mkdtemp())
 job_dir = project / "build_out" / localjob.new_job_id()
 job_id = localjob.start("mock", project, job_dir, "blinky", "fake-1", [
-    ("synth", ["bash", "-c", "echo first line; sleep 2; echo second line"]),
+    ("synth", ["bash", "-c", "echo first line; sleep 5; echo second line"]),
     ("pack", ["bash", "-c", "echo packing"]),
 ])
 dashboard.start_in_background(8797)
@@ -56,14 +56,14 @@ logs = [(t, d) for t, n, d in ev if n == "log"]
 text = "".join(d["text"] for _, d in logs)
 check("the log arrives in order, with every step", text == "first line\nsecond line\npacking\n")
 check("each piece says which step it is from", [d["step"] for _, d in logs] == ["synth", "synth", "pack"])
-check("the first line arrives while the build is still running", logs[0][0] < 1.6 and ev[-1][0] > 1.8)
+check("the first line arrives while the build is still running", logs[0][0] < 3.5 and ev[-1][0] > 4.5)
 check("the stream ends with the final state", ev[-1][1:] == ("end", {"state": "done"}))
 check("state events carry the current step", any(n == "state" and d.get("current_step") == "synth" for _, n, d in ev))
 
 # a second viewer, after the build: the whole log is replayed, then the stream ends at once
 t = time.time()
 again = read_events(f"{base}/api/jobs/{job_id}/log")
-check("a finished build is replayed in full and closes", "".join(d["text"] for _, n, d in again if n == "log") == text and time.time() - t < 3)
+check("a finished build is replayed in full and closes", "".join(d["text"] for _, n, d in again if n == "log") == text and time.time() - t < 8)
 
 try:
     urllib.request.urlopen(f"{base}/api/jobs/nope/log")

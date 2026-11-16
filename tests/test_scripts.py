@@ -36,4 +36,8 @@ def test_script(script, needs):
     if needs and not shutil.which(needs):
         pytest.skip(f"{needs} is not installed")
     r = subprocess.run([sys.executable, str(TESTS / script)], capture_output=True, text=True, timeout=300)
+    if r.returncode != 0:
+        # on GitHub Actions this becomes an annotation that can be read without access to the log
+        tail = " | ".join(l for l in (r.stdout + r.stderr).splitlines() if l.strip())[-1500:].replace("%", "%25").replace("\r", "")
+        print(f"::error title={script} failed::{tail}")
     assert r.returncode == 0, r.stdout[-3000:] + r.stderr[-3000:]
