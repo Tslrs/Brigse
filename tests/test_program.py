@@ -148,11 +148,13 @@ async def main():
         n = len(programmed())
 
         async def user_approves():
-            await asyncio.sleep(1)
-            store.decide_request(next(r["id"] for r in store.list_requests() if r["state"] == "pending"), approve=True)
-        waiter = asyncio.create_task(call(s, "program", confirm=True, wait_seconds=10, **args))
-        # the request must exist before the user can approve it: make it with a first, short call in the task
-        await asyncio.sleep(0.5)
+            for _ in range(200):                      # wait until the agent's request really exists (max 20 s)
+                pending = [r for r in store.list_requests() if r["state"] == "pending"]
+                if pending:
+                    store.decide_request(pending[0]["id"], approve=True)
+                    return
+                await asyncio.sleep(0.1)
+        waiter = asyncio.create_task(call(s, "program", confirm=True, wait_seconds=40, **args))
         approver = asyncio.create_task(user_approves())
         res = await waiter
         await approver
