@@ -5,8 +5,11 @@ Runs in a throw-away BRIGSE_HOME. usage: uv run python tests/test_cli.py
 """
 import os
 import pty
+import select
+import signal
 import subprocess
 import sys
+import time
 import tempfile
 
 home = tempfile.mkdtemp()
@@ -33,28 +36,53 @@ state = subprocess.run([sys.executable, "-c", f"from brigse import store; print(
 assert state == "pending", "a pipe must not be able to approve"
 print("a pipe is refused and the request stays pending")
 
+PROMPT = b"[approve/reject/skip]"
+
+
+def read_until(fd, buf, marker, count=1, timeout=30):
+    """Read from the terminal until `marker` has appeared `count` times: never guess how much arrives per read."""
+    deadline = time.time() + timeout
+    while buf.count(marker) < count:
+        left = deadline - time.time()
+        assert left > 0, f"timed out waiting for {marker!r}; got {buf!r}"
+        if select.select([fd], [], [], left)[0]:
+            try:
+                chunk = os.read(fd, 4096)
+            except OSError:          # the child closed the terminal
+                break
+            if not chunk:
+                break
+            buf += chunk
+    return buf
+
+
 pid, fd = pty.fork()
 if pid == 0:
     os.execvpe(sys.executable, [sys.executable, "-m", "brigse.server", "approvals"], env)
-out = b""
-os.read(fd, 4096)
 try:
-    out += os.read(fd, 4096)
-except OSError:
-    pass
-os.write(fd, b"maybe\n")
-os.read(fd, 4096)
-os.write(fd, b"reject\n")
-rest = b""
-while True:
-    try:
-        chunk = os.read(fd, 4096)
-    except OSError:
-        break
-    if not chunk:
-        break
-    rest += chunk
-os.waitpid(pid, 0)
+    out = read_until(fd, b"", PROMPT, 1)
+    os.write(fd, b"maybe\n")
+    out = read_until(fd, out, PROMPT, 2)         # a wrong answer is refused and asked again
+    os.write(fd, b"reject\n")
+    deadline = time.time() + 30
+    rest = b""
+    while time.time() < deadline:                # until the program ends
+        if select.select([fd], [], [], 1)[0]:
+            try:
+                chunk = os.read(fd, 4096)
+            except OSError:
+                break
+            if not chunk:
+                break
+            rest += chunk
+    else:
+        raise AssertionError(f"the program did not end after 'reject'; got {rest!r}")
+    os.waitpid(pid, 0)
+    pid = None
+finally:
+    if pid:                                        # a failure above: do not leave the child running
+        os.kill(pid, signal.SIGKILL)
+        os.waitpid(pid, 0)
 state = subprocess.run([sys.executable, "-c", f"from brigse import store; print(store.get_request('{rid}')['state'])"],
                        capture_output=True, text=True, env=env).stdout.strip()
 assert state == "rejected", f"typing reject in a terminal must reject (state: {state})"
