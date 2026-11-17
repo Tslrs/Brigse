@@ -368,14 +368,14 @@ function statusView(d){
     <span class="tag ${p.ok?"ok":"bad"}">${p.ok?"loaded":"failed"}</span></div>`;
   put("statusbox",h);}
 function approvals(d){
+  const row=(k,v)=>v?`<dt>${k}</dt><dd>${esc(v)}</dd>`:"";
   const pend=d.requests.filter(r=>r.state==="pending");let h="";
   if(pend.length){h+="<h2>The agent is asking</h2>";
     for(const r of pend){h+=`<div class="card"><div class="row"><div class="grow"><b>${esc(r.title)}</b></div>
       ${btn("Approve","/api/requests/"+r.id+"/approve",false,"primary")}${btn("Reject","/api/requests/"+r.id+"/reject",false,"danger")}</div>
-      <dl><dt>What</dt><dd>${esc(r.plan.what)}</dd><dt>From</dt><dd>${esc(r.plan.source)}</dd>
-      <dt>Disk</dt><dd>${esc(r.plan.disk)}</dd><dt>Licence</dt><dd>${esc(r.plan.licence)}</dd>
-      ${r.reason?`<dt>Why</dt><dd>${esc(r.reason)}</dd>`:""}</dl>
-      <div class="small mute">${r.kind==="uninstall_backend"?"Approve deletes the folder shown above.":r.plan.automatic?"Approve starts the download and install.":"Approve only records your decision; nothing is downloaded."}</div></div>`;}}
+      <dl>${row("What",r.plan.what)}${row(r.kind==="program_board"?"File":"From",r.plan.source)}
+      ${row("Disk",r.plan.disk)}${row("Licence",r.plan.licence)}${row("Why",r.reason)}</dl>
+      <div class="small mute">${r.kind==="program_board"?(r.plan.permanent?"Approve writes to the board's FLASH. It is permanent and survives power-off.":"Approve loads the design into the board's SRAM now. It is lost at power-off; the flash is not touched."):r.kind==="uninstall_backend"?"Approve deletes the folder shown above.":r.plan.automatic?"Approve starts the download and install.":"Approve only records your decision; nothing is downloaded."}</div></div>`;}}
   put("approvals",h);}
 function boardsView(d){
   const busy=d.busy.length>0,sel=d.boards.find(b=>b.id===d.selected_board);

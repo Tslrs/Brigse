@@ -6,6 +6,7 @@ colliding: one build at a time per add-on, and one use of the programmer at a ti
 """
 from __future__ import annotations
 
+import hashlib
 import secrets
 import threading
 import time
@@ -71,16 +72,84 @@ def rebuild(job_id: str, by: str) -> dict:
     return start_build(by=by, **meta["args"])
 
 
+APPROVAL_SECONDS = 600     # an approved load must be used within ten minutes, once
+
+
+def _program_subject(bit: Path, cable: str | None, board: str | None, write_flash: bool) -> str:
+    """What an approval is for: this exact file content, this target, SRAM or flash."""
+    digest = hashlib.sha256(bit.read_bytes()).hexdigest()[:16]
+    return "|".join([str(bit), digest, board or "", cable or "", "flash" if write_flash else "sram"])
+
+
+def _program_gate(bitstream: str, cable: str | None, board: str | None, part: str | None,
+                  write_flash: bool, wait_seconds: int) -> dict | None:
+    """The agent may not write to hardware by itself: every load needs the user's approval.
+
+    Returns None when an approval for exactly this load is ready to be used (it is then marked as
+    in use); otherwise returns what the agent should be told (waiting, or rejected).
+    """
+    dry = core.program(bitstream, cable, board, part, write_flash, False)      # checks everything first
+    bit = Path(bitstream).expanduser().resolve()
+    subject = _program_subject(bit, cable, board, write_flash)
+    target = board or cable or "the board"
+    deadline = time.time() + max(0, min(wait_seconds, 50))
+    while True:
+        req = next((r for r in store.list_requests() if r["kind"] == "program_board" and r["subject"] == subject), None)
+        if req and req["state"] in ("approved", "loading", "rejected") and time.time() - (req["decided"] or 0) > APPROVAL_SECONDS:
+            req = None                                       # an old decision (or a load that died): ask again
+        if req is None or req["state"] in ("done", "failed"):
+            flash = "FLASH of" if write_flash else "SRAM of"
+            req = store.new_request(
+                "program_board", subject, f"Load {bit.name} to {target} ({'flash, PERMANENT' if write_flash else 'SRAM, temporary'})",
+                {"what": f"Write {bit.name} to the {flash} {target}. {dry['would_run']}", "source": str(bit),
+                 "disk": "", "licence": "", "automatic": False, "permanent": write_flash},
+                "The agent wants to write to your board.")
+        if req["state"] == "approved":
+            store.update_request(req["id"], state="loading")
+            return None
+        if req["state"] == "rejected":
+            return {"ok": False, "state": "rejected", "request_id": req["id"],
+                    "note": "The user rejected this load. Do not retry or work around it; ask them how to proceed."}
+        if req["state"] != "pending":                        # another call is loading it right now
+            return {"ok": False, "state": req["state"], "request_id": req["id"],
+                    "note": "This load is already in progress."}
+        if time.time() >= deadline:
+            return {"ok": False, "state": "pending_approval", "request_id": req["id"], "target": dry["target"],
+                    "note": "Nothing was written. The user must approve this load first (dashboard, or "
+                            "`brigse approvals` in a terminal). Tell them, then call program again with the "
+                            "same arguments and wait_seconds=50."}
+        time.sleep(2)
+
+
 def program(bitstream: str, cable: str | None, board: str | None, part: str | None,
-            write_flash: bool, confirm: bool, by: str) -> dict:
+            write_flash: bool, confirm: bool, by: str, wait_seconds: int = 0) -> dict:
     if not confirm:
         return core.program(bitstream, cable, board, part, write_flash, confirm)
+    if by != "agent":                      # the user's own click in the dashboard is the approval
+        return _program_now(bitstream, cable, board, part, write_flash, by)
+    held = _program_gate(bitstream, cable, board, part, write_flash, wait_seconds)
+    if held is not None:
+        return held
+    subject = _program_subject(Path(bitstream).expanduser().resolve(), cable, board, write_flash)
+    req = next(r for r in store.list_requests() if r["kind"] == "program_board" and r["subject"] == subject)
+    try:
+        result = _program_now(bitstream, cable, board, part, write_flash, by)
+    except BackendError:
+        store.update_request(req["id"], state="approved")    # the approval was not used up
+        raise
+    store.update_request(req["id"], state="done" if result.get("ok") else "failed",
+                         result=(result.get("output") or "")[-300:])
+    return {**result, "request_id": req["id"]}
+
+
+def _program_now(bitstream: str, cable: str | None, board: str | None, part: str | None,
+                 write_flash: bool, by: str) -> dict:
     target = board or cable or "the board"
     with store.lock("program", by, f"loading {Path(bitstream).name} to {target}") as holder:
         if holder:
             raise BackendError(f"The programmer is in use ({holder['what']}, started by "
                                f"{_who(holder['by'])}). Try again in a moment.")
-        result = core.program(bitstream, cable, board, part, write_flash, confirm)
+        result = core.program(bitstream, cable, board, part, write_flash, True)
     store.set_state(last_program={"ok": result.get("ok"), "file": Path(bitstream).name, "target": target,
                                   "flash": write_flash, "by": by, "at": time.time(),
                                   "output": (result.get("output") or "")[-300:]})

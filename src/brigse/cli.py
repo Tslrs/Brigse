@@ -133,11 +133,14 @@ def approvals(argv: list[str]) -> int:
     for r in pend:
         plan = r["plan"]
         print("\n" + bold(r["title"]))
-        for label, text in (("What", plan.get("what")), ("From", plan.get("source")), ("Disk", plan.get("disk")),
+        for label, text in (("What", plan.get("what")), ("File" if r["kind"] == "program_board" else "From", plan.get("source")), ("Disk", plan.get("disk")),
                             ("Licence", plan.get("licence")), ("Why", r.get("reason"))):
             if text:
                 print(_field(label, str(text)))
-        note = ("Approve deletes the folder shown above." if r["kind"] == "uninstall_backend"
+        note = (("Approve writes to the board's FLASH. It is permanent and survives power-off." if plan.get("permanent")
+                 else "Approve loads the design into the board's SRAM now. It is lost at power-off; the flash is not touched.")
+                if r["kind"] == "program_board"
+                else "Approve deletes the folder shown above." if r["kind"] == "uninstall_backend"
                 else "Approve starts the download and install." if plan.get("automatic")
                 else "Approve only records your decision; nothing is downloaded.")
         print(dim(textwrap.fill(note, width=max(40, shutil.get_terminal_size().columns - 2),

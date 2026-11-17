@@ -22,7 +22,7 @@ mcp = FastMCP("brigse", instructions=(
     "build_status with wait_seconds=50 until state is 'done' or 'failed'; every answer has a "
     "'next' field that says what to do. Do not start the same build again while one is running, "
     "and tell the user once that a long build is running and where the dashboard is. When it is "
-    "done, read the report and the diagnosis, and only then say whether it worked. program writes to hardware only when confirm=true. Installing an add-on needs "
+    "done, read the report and the diagnosis, and only then say whether it worked. program never writes to hardware by itself: with confirm=true it asks the user, who approves in the dashboard or with `brigse approvals`; call program again with the same arguments and wait_seconds=50 until it runs, and if the user rejects, stop. Installing an add-on needs "
     "the user's approval: call request_install, tell the user to open the dashboard, then poll "
     "install_status. Only the user can approve, in the dashboard. If a request is rejected, stop: "
     "do not retry it or work around it."))
@@ -183,7 +183,7 @@ def _next_step(st: dict, backend: str) -> str:
     if state == "done":
         return ("Finished. Read 'report' (timing, utilization) and 'diagnosis' (problems in plain words) before "
                 "you tell the user it worked. Timing not met or listed problems mean it did not fully work. "
-                "To put it on a board use program with confirm=false first, then ask the user.")
+                "To put it on a board use program with confirm=false first (it shows the command), then confirm=true: the user approves it.")
     if state == "failed":
         return "Failed. Read 'diagnosis' for the cause and the fix, correct the sources, then build again."
     return "State is unclear. Call build_status again; if it stays unclear, tell the user and point to the dashboard."
@@ -386,16 +386,25 @@ def detect_boards(cable: str | None = None) -> dict:
 
 @mcp.tool()
 def program(bitstream: str, cable: str | None = None, board: str | None = None,
-            part: str | None = None, write_flash: bool = False, confirm: bool = False) -> dict:
-    """Load a bitstream onto a board with openFPGALoader.
+            part: str | None = None, write_flash: bool = False, confirm: bool = False,
+            wait_seconds: int = 0) -> dict:
+    """Load a bitstream onto a board with openFPGALoader. The user must approve every load.
 
     Prefer the temporary SRAM load (write_flash=false): it leaves the design stored on the board
     untouched. Use write_flash=true only when the user explicitly asks for a permanent write.
 
-    Without confirm=true this is a dry run that only shows the command. write_flash=true makes the
-    design persistent. Pass part to check first that the loader supports the device.
+    Without confirm=true this is a dry run that only shows the command. With confirm=true nothing is
+    written yet: a request appears in the dashboard (and in `brigse approvals`) and only the user can
+    approve it. Tell the user, then call program again with the same arguments and wait_seconds=50
+    (max) until it loads. An approval is for that exact file, target and memory, and for one load.
+    If the user rejects it, stop and ask them. Pass part to check first that the loader supports the device.
     """
-    return _guard(lambda: actions.program(bitstream, cable, board, part, write_flash, confirm, by="agent"))
+    def run():
+        out = actions.program(bitstream, cable, board, part, write_flash, confirm, by="agent", wait_seconds=wait_seconds)
+        if out.get("state") == "pending_approval":
+            out["where"] = dashboard.url(PORT)
+        return out
+    return _guard(run)
 
 
 def main() -> None:

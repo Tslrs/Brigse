@@ -17,7 +17,8 @@ async def main():
     params = StdioServerParameters(command=sys.executable, args=["-m", "brigse.server"], env=env)
     async with stdio_client(params) as (r, w), ClientSession(r, w) as s:
         await s.initialize()
-        for args in ({"confirm": False}, {"confirm": True}):
+        print("The second call waits up to 50 s for you to approve: use `brigse approvals` or the dashboard.")
+        for args in ({"confirm": False}, {"confirm": True, "wait_seconds": 50}):
             res = await s.call_tool("program", {"bitstream": bit, "board": board, "write_flash": False, **args})
             print(json.dumps(json.loads(res.content[0].text), indent=1))
 

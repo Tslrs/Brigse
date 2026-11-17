@@ -98,6 +98,11 @@ async def main():
                 "name": "program", "by": "user", "what": "loading test.fs to tangnano9k",
                 "since": time.time(), "pid": os.getpid()}))
             bit = view["report"]["bitstream"]["path"]
+            asked = await call(s, "program", bitstream=bit, board="tangnano9k", confirm=True)
+            assert asked.get("state") == "pending_approval", asked      # the agent cannot write by itself
+            rq = Path(home) / "requests" / f"{asked['request_id']}.json"
+            req = json.loads(rq.read_text())
+            rq.write_text(json.dumps({**req, "state": "approved", "decided": time.time()}))   # the user approves
             busy = await call(s, "program", bitstream=bit, board="tangnano9k", confirm=True)
             assert "in use" in busy.get("error", ""), busy
             assert http(f"/api/jobs/{job['job_id']}/load", {}, token)[0] == 409

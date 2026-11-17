@@ -1,6 +1,7 @@
 """program, detect_boards and chip_view over MCP, with no board: a fake openFPGALoader records what it is asked.
 
-Checks: a dry run writes nothing, confirm=true runs the loader with the right arguments, SRAM unless flash is
+Checks: a dry run writes nothing, confirm=true alone writes nothing and asks the user (every load needs an approval,
+for that exact file, target and memory, used once, valid ten minutes), the loader then runs with the right arguments, SRAM unless flash is
 asked for, devices the loader does not list are refused, a failing loader is reported, the programmer is
 used by one thing at a time. No vendor tool and no hardware. usage: uv run python tests/test_program.py
 """
@@ -10,6 +11,7 @@ import os
 import stat
 import sys
 import tempfile
+import time
 from pathlib import Path
 
 from mcp import ClientSession, StdioServerParameters
@@ -54,6 +56,14 @@ async def call(s, name, **args):
     return json.loads((await s.call_tool(name, args)).content[0].text)
 
 
+async def approve_and_load(s, **args):
+    """What an agent does with the user's help: ask, the user approves, ask again."""
+    first = await call(s, "program", confirm=True, **args)
+    assert first.get("state") == "pending_approval", first
+    store.decide_request(first["request_id"], approve=True)
+    return await call(s, "program", confirm=True, **args)
+
+
 async def main():
     env = {**os.environ, "BRIGSE_HOME": HOME, "BRIGSE_DASHBOARD": "0", "FAKE_DIR": str(FAKE),
            "PATH": f"{FAKE}{os.pathsep}{os.environ['PATH']}"}
@@ -79,21 +89,51 @@ async def main():
                            "no cable and no board": dict(bitstream=str(BIT))}.items():
             check(f"{name} is a readable error", "error" in await call(s, "program", **args))
 
-        ok = await call(s, "program", bitstream=str(BIT), board="tangnano9k", confirm=True)
+        args = dict(bitstream=str(BIT), board="tangnano9k")
+        pend = await call(s, "program", confirm=True, **args)
+        check("confirm alone writes nothing and asks the user", pend.get("state") == "pending_approval" and programmed() == [])
+        req = store.get_request(pend["request_id"])
+        check("the request names the file, says SRAM, and waits",
+              req["kind"] == "program_board" and req["state"] == "pending" and "SRAM" in req["title"]
+              and "design.fs" in req["plan"]["what"] and req["plan"]["permanent"] is False)
+        again = await call(s, "program", confirm=True, **args)
+        check("asking again does not make a second request", again["request_id"] == pend["request_id"] and programmed() == [])
+        fl_pend = await call(s, "program", write_flash=True, confirm=True, **args)
+        check("an SRAM request cannot be used for flash",
+              fl_pend["state"] == "pending_approval" and fl_pend["request_id"] != pend["request_id"]
+              and store.get_request(fl_pend["request_id"])["plan"]["permanent"] is True and programmed() == [])
+        store.decide_request(fl_pend["request_id"], approve=False)
+        rej = await call(s, "program", write_flash=True, confirm=True, **args)
+        check("a rejected load is refused and writes nothing", rej.get("state") == "rejected" and programmed() == [])
+        store.update_request(fl_pend["request_id"], decided=time.time() - 700)
+        retry = await call(s, "program", write_flash=True, confirm=True, **args)
+        check("a rejection stops counting after ten minutes", retry["state"] == "pending_approval" and retry["request_id"] != fl_pend["request_id"])
+        store.decide_request(retry["request_id"], approve=False)                 # leave nothing pending for flash
+        store.update_request(retry["request_id"], decided=time.time() - 700)
+
+        store.decide_request(pend["request_id"], approve=True)
+        ok = await call(s, "program", confirm=True, **args)
+        check("after approval it loads, and the request is used up",
+              ok["ok"] is True and store.get_request(pend["request_id"])["state"] == "done")
+        nxt = await call(s, "program", confirm=True, **args)
+        check("a second load needs a new approval", nxt.get("state") == "pending_approval" and nxt["request_id"] != pend["request_id"]
+              and len(programmed()) == 1)
         check("confirm runs the loader and reports success", ok["ok"] is True and "SRAM" in ok["target"] and "Done" in ok["output"])
         check("it ran with the board and the file, without flash", programmed() == [f"-b tangnano9k {BIT}"])
         last = (await call(s, "activity"))["last_program"]
         check("the last use is remembered, with who did it", last["ok"] and last["file"] == "design.fs" and last["by"] == "agent" and last["flash"] is False)
 
-        fl = await call(s, "program", bitstream=str(BIT), board="tangnano9k", write_flash=True, confirm=True)
+        fl = await approve_and_load(s, write_flash=True, **args)
         check("flash only when asked, and it says it is persistent", "persistent" in fl["target"] and programmed()[-1] == f"-b tangnano9k -f {BIT}")
 
         (FAKE / "fail").write_text("")
-        bad = await call(s, "program", bitstream=str(BIT), board="tangnano9k", confirm=True)
+        bad = await approve_and_load(s, **args)
         check("a failing loader is reported with its output", bad["ok"] is False and "no device found" in bad["output"])
         check("and remembered as a failure", (await call(s, "activity"))["last_program"]["ok"] is False)
         (FAKE / "fail").unlink()
 
+        ready = await call(s, "program", confirm=True, **args)           # the user approves; then the programmer is busy
+        store.decide_request(ready["request_id"], approve=True)
         before = len(programmed())
         with store.lock("program", "user", "loading from the dashboard") as holder:
             check("(the test holds the programmer)", holder is None)
@@ -101,7 +141,36 @@ async def main():
             check("the programmer is used by one thing at a time", "in use" in busy.get("error", "") and "you, from the dashboard" in busy["error"])
             check("the loader was not called meanwhile", len(programmed()) == before)
             check("a dry run is still allowed", (await call(s, "program", bitstream=str(BIT), board="tangnano9k")).get("dry_run") is True)
-        check("afterwards it works again", (await call(s, "program", bitstream=str(BIT), board="tangnano9k", confirm=True))["ok"] is True)
+        check("afterwards it works again: the approval was not used up",
+              (await call(s, "program", bitstream=str(BIT), board="tangnano9k", confirm=True))["ok"] is True)
+
+        # the agent waits (wait_seconds) and the user approves meanwhile
+        n = len(programmed())
+
+        async def user_approves():
+            await asyncio.sleep(1)
+            store.decide_request(next(r["id"] for r in store.list_requests() if r["state"] == "pending"), approve=True)
+        waiter = asyncio.create_task(call(s, "program", confirm=True, wait_seconds=10, **args))
+        # the request must exist before the user can approve it: make it with a first, short call in the task
+        await asyncio.sleep(0.5)
+        approver = asyncio.create_task(user_approves())
+        res = await waiter
+        await approver
+        check("waiting for the user works: it loads right after the approval", res.get("ok") is True and len(programmed()) == n + 1)
+
+        # an approval is for this file content, once, and for ten minutes
+        p2 = await call(s, "program", confirm=True, **args)
+        store.decide_request(p2["request_id"], approve=True)
+        BIT.write_bytes(b"a different bitstream")
+        n = len(programmed())
+        swapped = await call(s, "program", confirm=True, **args)
+        check("a changed file needs a new approval", swapped.get("state") == "pending_approval"
+              and swapped["request_id"] != p2["request_id"] and len(programmed()) == n)
+        store.decide_request(swapped["request_id"], approve=True)
+        store.update_request(swapped["request_id"], decided=time.time() - 700)
+        old = await call(s, "program", confirm=True, **args)
+        check("an old approval is not accepted", old.get("state") == "pending_approval" and old["request_id"] != swapped["request_id"]
+              and len(programmed()) == n)
 
         check("chip_view of a missing file is a readable error", "Bitstream not found" in (await call(s, "chip_view", bitstream=str(BIT) + ".none")).get("error", ""))
         cv = await call(s, "chip_view", bitstream=str(BIT))
@@ -109,6 +178,14 @@ async def main():
 
 
 asyncio.run(main())
+
+# the user's own load from the dashboard is its own approval: no request, no waiting
+os.environ["PATH"] = f"{FAKE}{os.pathsep}{os.environ['PATH']}"
+os.environ["FAKE_DIR"] = str(FAKE)
+from brigse import actions  # noqa: E402
+n = len(programmed())
+res = actions.program(str(BIT), None, "tangnano9k", None, False, True, "user")
+check("a load the user starts is not held for approval", res["ok"] is True and len(programmed()) == n + 1)
 
 # the device-name matching, on its own
 check("Gowin part names become family-size", (core._part_name("gw1nr-lv9qn88pc6/i5"), core._part_name("gw2a-lv18pg256c8/i7"),
