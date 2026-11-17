@@ -6,7 +6,9 @@ test_bare_environment, ...) are not run here; they are run by hand.
 
 usage: uv run pytest
 """
+import os
 import shutil
+import signal
 import subprocess
 import sys
 from pathlib import Path
@@ -37,9 +39,22 @@ SCRIPTS = [
 def test_script(script, needs):
     if needs and not shutil.which(needs):
         pytest.skip(f"{needs} is not installed")
-    r = subprocess.run([sys.executable, str(TESTS / script)], capture_output=True, text=True, timeout=300)
-    if r.returncode != 0:
+    env = {**os.environ, "PYTHONFAULTHANDLER": "1"}
+    proc = subprocess.Popen([sys.executable, str(TESTS / script)], stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                            text=True, env=env)
+    try:
+        out, err = proc.communicate(timeout=240)
+    except subprocess.TimeoutExpired:
+        # a hung script: SIGABRT makes faulthandler print where every thread is stuck
+        proc.send_signal(signal.SIGABRT)
+        try:
+            out, err = proc.communicate(timeout=15)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+            out, err = proc.communicate()
+        out, err = out or "", "TIMED OUT after 240 s\n" + (err or "")
+    if proc.returncode != 0:
         # on GitHub Actions this becomes an annotation that can be read without access to the log
-        tail = " | ".join(l for l in (r.stdout + r.stderr).splitlines() if l.strip())[-1500:].replace("%", "%25").replace("\r", "")
+        tail = " | ".join(l for l in (out + err).splitlines() if l.strip())[-1500:].replace("%", "%25").replace("\r", "")
         print(f"::error title={script} failed::{tail}")
-    assert r.returncode == 0, r.stdout[-3000:] + r.stderr[-3000:]
+    assert proc.returncode == 0, out[-3000:] + err[-3000:]
