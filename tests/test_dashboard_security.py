@@ -67,7 +67,7 @@ req = store.new_request("install_backend", "x", "Install the example add-on",
                         {"what": "w", "source": "s", "disk": "1 MB", "licence": "MIT", "automatic": False}, "test")
 url = f"/api/requests/{req['id']}/approve"
 check("no token: refused", call("POST", url, body={})[0] == 403)
-check("wrong token: refused", call("POST", url, headers={"X-Token": token[:-1] + "x"}, body={})[0] == 403)
+check("wrong token: refused", call("POST", url, headers={"X-Token": token[:-1] + ("y" if token[-1] == "x" else "x")}, body={})[0] == 403)
 check("a token of another length: refused", call("POST", url, headers={"X-Token": "a"}, body={})[0] == 403)
 check("the request is still pending after all that", store.get_request(req["id"])["state"] == "pending")
 check("the token in a query string is not enough", call("POST", url + f"?token={token}", body={})[0] == 403)
