@@ -63,6 +63,12 @@ def status(job_id: str) -> tuple[dict, dict]:
         raise BackendError(f"Unknown job '{job_id}'.")
     meta = json.loads(meta_path.read_text())
     job_dir = Path(meta["job_dir"])
+    if not job_dir.is_dir():
+        # Someone deleted the build folder: no DONE line can ever arrive, so do not report "running"
+        # for ever (that would also block every new build on this add-on).
+        return meta, {"job_id": job_id, "steps": [], "step_order": meta["step_order"], "state": "failed",
+                      "elapsed_seconds": int(time.time() - meta["started"]), "outputs_dir": str(job_dir),
+                      "message": "The build folder was deleted, so this build cannot finish. Build again."}
     steps, current, done_rc = [], None, None
     status_file = job_dir / "job.status"
     for line in status_file.read_text().splitlines() if status_file.is_file() else []:

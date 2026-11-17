@@ -6,6 +6,7 @@ Changed
 - `program` now needs the user's approval for every load the agent asks for. Found in a real test: Claude Code called `program` with `confirm=true` straight away and wrote to the board without asking. Now `confirm=true` only creates a request; the user approves in the dashboard or with `brigse approvals`, and the agent calls `program` again with the same arguments (`wait_seconds=50` waits for the answer). An approval is for that exact file content, target and memory (a flash request is never satisfied by an SRAM approval), is used once and is good for ten minutes. A rejection is respected for ten minutes. A dry run (`confirm=false`) is unchanged, and the dashboard's own "Load to board" button needs no extra step: the click is the approval.
 
 Fixed
+- A build whose folder was deleted stayed `running` for ever and, because only one build runs per add-on, blocked every new build on it (an agent was stuck behind a 45-minute-old ghost job and had to switch tools). It now ends as `failed` with the reason. `tests/test_localjob.py`.
 - `program` with a `part` refused every Gowin part (Tang Nano 9K and 20K included): the loader lists `GW1NR-9`, the check looked for `gw1nr`. Found by the new `tests/test_program.py`. Spartan-3A parts are still refused, as documented.
 
 ## 0.2.0

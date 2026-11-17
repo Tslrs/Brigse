@@ -22,6 +22,7 @@ SCRIPTS = [
     ("test_protocol.py", None),
     ("test_lint.py", None),
     ("test_program.py", None),
+    ("test_localjob.py", None),
     ("test_report_ise.py", None),
     ("test_livelog.py", None),
     ("test_dashboard_security.py", None),
